@@ -31,6 +31,7 @@ app = dash.Dash(
     ],
     external_stylesheets=external_stylesheets
 )
+server = app.server
 
 app.title = 'Alfarvis'
 algoClass = getAlgorithms()
