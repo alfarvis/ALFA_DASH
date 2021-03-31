@@ -1,0 +1,179 @@
+@import url('https://fonts.googleapis.com/css?family=Playfair+Display');
+
+#body {
+    padding-bottom: 5rem;
+}
+
+@media (max-width: 700px) {
+    #body {
+        width: 100%;
+    }
+}
+
+/* Scalable Container
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.container.scalable {
+    width: 95%;
+    max-width: none;
+}
+
+/* Banner
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+.banner {
+    background-color: #000000; /* Machine Learning Color is orange */
+    padding: 0 0;
+    width: 100%;
+    margin-bottom: 5rem;
+}
+
+.banner h2 {
+    color: #000000;
+    display: inline-block;
+    font-family: 'Playfair Display', sans-serif;
+    font-size: 4rem;
+    line-height: 1;
+    text-align: center;
+}
+
+.banner h2:hover {
+    color: #000000;
+    cursor: pointer;
+}
+
+.banner Img {
+    position: relative;
+    float: right;
+    height: 5rem;
+    margin-top: 1.25rem
+}
+
+@media (max-width: 1300px) {
+
+    .banner .container.scalable {
+        display: flex;
+        flex-direction: column-reverse;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .banner h2 {
+        font-size: 4rem;
+    }
+
+    .banner Img {
+        height: 8rem;
+        margin-bottom: 3rem;
+    }
+}
+
+@media (max-width: 700px) {
+    .banner .container.scalable {
+        padding: 0
+    }
+
+    .banner Img {
+        height: 4rem;
+        margin-bottom: 2rem;
+    }
+
+    .banner h2 {
+        font-size: 3rem;
+    }
+}
+
+@media (max-width: 500px) {
+    .banner {
+        padding: 1rem 0;
+        margin-bottom: 1rem;
+    }
+
+    .banner Img {
+        height: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .banner h2 {
+        font-size: 2.5rem;
+    }
+}
+
+/* app-container
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+@media (min-width: 951px) {
+    #app-container {
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+    }
+}
+
+/* Dropdowns
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+
+
+
+@media (min-width: 1301px) {
+    #left-column {
+        flex: 1 20%;
+        margin: 0 3rem 0 0;
+        max-height: 83rem;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .card {
+        padding-left: 2rem;
+    }
+}
+
+@media (max-width: 1300px) {
+    #left-column {
+        flex: 1 20%;
+        margin: 0 3rem 0 0;
+        max-height: 70rem;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+}
+
+
+
+@media (max-width: 950px) {
+    #left-column {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        max-height: none;
+        max-width: none;
+    }
+}
+
+@media (max-width: 700px) {
+    #first-card {
+        margin: 0;
+        padding-right: 0;
+        padding-left: 0;
+    }
+}
+
+
+
+/* Left column
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+#slider-svm-parameter-C-coef {
+    padding: 5px 10px 25px;
+}
+
+#slider-svm-parameter-gamma-coef {
+    padding: 5px 10px 25px
+}
+
+#shrinking-container {
+    padding: 20px 10px 25px 4px
+}
+
