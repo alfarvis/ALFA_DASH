@@ -15,6 +15,9 @@ import dash_table
 from dash.exceptions import PreventUpdate
 import utils.dash_reusable_components as drc
 from getAlgorithms import getAlgorithms
+from DataGuru import DataGuru
+from algorithms.scatter2D_VP import Scatter2D_VP
+from algorithms.scatter3D_VP import Scatter3D_VP
 import plotly.express as px
 #import utils.figures as figs
 colorscales = px.colors.named_colorscales()
@@ -35,7 +38,10 @@ server = app.server
 
 app.title = 'Alfarvis'
 algoClass = getAlgorithms()
+dataGuru = DataGuru()
 algo_list = algoClass.getAlgos()
+scatter2D_VP = Scatter2D_VP()
+scatter3D_VP = Scatter3D_VP()
 app.layout = html.Div(
     children=[
         # .container class is fixed, .container.scalable is scalable
@@ -112,24 +118,9 @@ app.layout = html.Div(
                                     ]),                        
                                     html.Div(id='drgDrop'),
                                     dcc.Store(id='memory-output'),
+                                    
                                     drc.NamedDropdown(
-                                        name="Select Reference Feature",
-                                        id="subtype-reference",                                            
-                                        clearable=True,
-                                        searchable=True,
-                                        value=None,
-                                        multi=False
-                                    ),
-                                    drc.NamedDropdown(
-                                        name="Select Feature(s)",
-                                        id="subtype-text",                                            
-                                        clearable=True,
-                                        searchable=True,
-                                        value=None,
-                                        multi=True
-                                    ),
-                                    drc.NamedDropdown(
-                                        name="Select Algorithm",
+                                        name="Select/Search Algorithm",
                                         id="algorithm",
                                         options = algo_list,
                                         clearable=True,
@@ -138,12 +129,7 @@ app.layout = html.Div(
                                     ),
                                     html.Hr(),    
                                     html.Div(id="functionProperties")
-                                    
-                                    #dash_table.DataTable(
-                                    #    id='memory-table',   
-                                    #    columns=[{'name': i, 'id': i} for i in range(0,100,5)]
-                                    #    )
-                                        
+                                                                            
                                     ],
                                 ),
                                 html.Br(),
@@ -167,6 +153,7 @@ app.layout = html.Div(
                                         children=[
                                             html.Div(id='output_bar_graph'),
                                             html.Div(id='output_scatter_graph'),
+                                            html.Div(id='output_scatter_graph3d'),
                                         ]
                                         )
                                 ]
@@ -183,33 +170,6 @@ app.layout = html.Div(
 )
 
 
-# @app.callback(
-#     Output(component_id='drgDrop', component_property='children'),
-#     [Input('load-button-state', 'n_clicks'),]
-#     )
-# def create_load_dropdown(n_clicks):
-#     if n_clicks % 2 == 1:
-#         return html.Div([
-#             dcc.Upload(
-#                 id='upload-data',
-#                 children=html.Div([
-#                     'Drag and Drop or ',
-#                     html.A('Select Files')
-#                 ]),
-#                 style={
-#                     'width': '100%',
-#                     'height': '60px',
-#                     'lineHeight': '60px',
-#                     'borderWidth': '1px',
-#                     'borderStyle': 'dashed',
-#                     'borderRadius': '5px',
-#                     'textAlign': 'center',
-#                     'margin': '10px'
-#                 },
-#                 # Allow multiple files to be uploaded
-#                 multiple=False
-#             ),
-# ])
 
 @app.callback(    
     Output(component_id='memory-output', component_property='data'),
@@ -223,11 +183,8 @@ def upload_file(contents, filename, date):
         myData  = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
         return myData.to_dict('records')
 
-@app.callback(    
-    [Output('subtype-text', 'options'),
-    Output('subtype-reference', 'options'),
-    Output('loaded_data_table', 'children')
-    ],
+@app.callback(        
+    Output('loaded_data_table', 'children'),
     [Input(component_id='memory-output', component_property='data')],
     )
 def update_table(data):
@@ -236,8 +193,10 @@ def update_table(data):
         raise PreventUpdate
     print(data[0].keys())
     df = pd.DataFrame.from_records(data)
-    
-    return [{'label':key,'value':key} for key in data[0].keys()],[{'label':key,'value':key} for key in data[0].keys()], html.Div([dash_table.DataTable(
+    print('here')
+    dataGuru.setDF(df)
+
+    return html.Div([dash_table.DataTable(
         id='table',
         columns=[{"name": i, "id": i} for i in df.columns],
         data=df.to_dict('records'),
@@ -245,92 +204,21 @@ def update_table(data):
 
 @app.callback(    
     Output('functionProperties', 'children'),
-    [Input(component_id='algorithm', component_property='value')],
-    [State('subtype-text','options'),
-    State('subtype-text','value'),
-    State('subtype-reference','value'),    
-    ]
+    [Input(component_id='algorithm', component_property='value')],    
     )
-def algorithmProps(algorithm,options,value,refVal):
+def algorithmProps(algorithm):
     
-    if algorithm in 'bar plot':
+    df = dataGuru.getDF()
+    options = [{'label':i,'value':i} for i in df.columns]
+    if algorithm in 'boxPlot':
         return html.Div([
-            html.Button('Generate bar plot', id='generate-bar-plot',n_clicks=0)
+            html.Button('Generate a box plot', id='generate-bar-plot',n_clicks=0)
             ]            
             )
-    if algorithm in 'scatter plot':
-        valueX = None
-        valueY = None
-        if value is not None:
-            valueX = value[0]
-            if len(value)>1:
-                valueY = value[1]
-        
-        colorVal = None
-        hoverVal = None
-        sizeVal = None
-        if refVal is not None:
-            colorVal = refVal
-            hoverVal = refVal
-            sizeVal = refVal
-        
-        
-
-        return html.Div([
-            drc.NamedDropdown(name="Feature on the x axis",
-                                        id="featureX",                                            
-                                        clearable=True,
-                                        searchable=True,
-                                        options=options,
-                                        value=valueX,
-                                        multi=False
-                                    ),
-            drc.NamedDropdown(name="Feature on the y axis",
-                                        id="featureY",                                            
-                                        clearable=True,
-                                        searchable=True,
-                                        options=options,
-                                        value=valueY,
-                                        multi=False
-                                    ),
-            
-            drc.NamedDropdown(name="Hover feature",
-                                        id="featureHover",                                            
-                                        clearable=True,
-                                        searchable=True,
-                                        options=options,
-                                        value=hoverVal,
-                                        multi=True
-                                    ),
-            drc.NamedDropdown(name="Size feature",
-                                        id="featureSize",                                            
-                                        clearable=True,
-                                        searchable=True,
-                                        options=options,
-                                        value=sizeVal,
-                                        multi=False
-                                    ),
-
-            drc.NamedDropdown(name="Reference feature for color mapping",
-                                        id="featureColor",                                            
-                                        clearable=True,
-                                        searchable=True,
-                                        options=options,
-                                        value=colorVal,
-                                        multi=False
-                                    ),
-            drc.NamedDropdown(name="Color Scale",
-                                        id="colorscale",                                            
-                                        clearable=True,
-                                        searchable=True,
-                                        options=[{"value": x, "label": x} 
-                                                 for x in colorscales],
-                                        value='viridis'
-                                    ),
-
-            html.Button('Generate scatter plot', id='generate-scatter-plot',n_clicks=0)
-            ]            
-            )
+    if algorithm in 'scatter2D':                
+        return scatter2D_VP.getAlgoProps(options,colorscales)
+    if algorithm in 'scatter3D':        
+        return scatter3D_VP.getAlgoProps(options,colorscales)    
 
 @app.callback(
     Output('output_bar_graph','children'),
@@ -373,7 +261,8 @@ def createBarPlot(n_clicks,data):
 def createScatterPlot(n_clicks,data,featureX,featureY,featureColor,featureHover,featureSize,colorscale):
     print(n_clicks)
     if n_clicks>0: 
-        df = pd.DataFrame.from_records(data)                    
+        #df = pd.DataFrame.from_records(data)                    
+        df = dataGuru.getDF()
         if featureHover is not None:
             if type(featureHover) != list:
                 featureHover = [featureHover]
@@ -386,7 +275,37 @@ def createScatterPlot(n_clicks,data,featureX,featureY,featureColor,featureHover,
             ])
         
     
-
+@app.callback(
+    Output('output_scatter_graph3d','children'),
+    [Input('generate-scatter-plot3','n_clicks'),
+    ],
+    [State('memory-output','data'),
+    State('featureX','value'),
+    State('featureY','value'),
+    State('featureZ','value'),
+    State('featureColor','value'),
+    State('featureHover','value'),
+    State('featureSize','value'),
+    State('colorscale','value'),
+    ]
+    )
+def createScatterPlot3d(n_clicks,data,featureX,featureY,featureZ,featureColor,featureHover,featureSize,colorscale):
+    print(n_clicks)
+    if n_clicks>0: 
+        #df = pd.DataFrame.from_records(data)                    
+        df = dataGuru.getDF()
+        if featureHover is not None:
+            if type(featureHover) != list:
+                featureHover = [featureHover]
+        fig = px.scatter_3d(df,x=featureX, y=featureY,z=featureZ,color=featureColor,hover_data = featureHover, size = featureSize, color_continuous_scale=colorscale)       
+        return html.Div([
+            dcc.Graph(
+        id='example-graph3',
+        figure=fig,
+                )
+            ],
+        style = {'display': 'inline-block', 'width': '90%', 'height': '90%'}
+            )
 
 
 #@app.callback(
@@ -407,4 +326,4 @@ if __name__ == '__main__':
     #args = vars(parser.parse_args())
     #is_debug = args['debug']
 
-    app.run_server(debug=False)
+    app.run_server(debug=True)

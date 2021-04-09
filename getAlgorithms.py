@@ -1,11 +1,13 @@
 class getAlgorithms:
 	def __init__(self):
-		algorithms = ['bar plot',
-		'histogram',
-		'scatter plot',
-		'violin plot',		
+		algorithms = [
+		{'label': 'Visualization: Box Plot','value':'boxPlot'},
+		{'label': 'Visualization: 2D Scatter Plot','value':'scatter2D'},
+		{'label': 'Visualization: 3D Scatter Plot','value':'scatter3D'},
+		{'label': 'Visualization: Histogram','value':'histogram'},				
+
 		]
-		self.algo_list = [{'label':i,'value':i} for i in algorithms]
+		self.algo_list = algorithms
 
 	def getAlgos(self):
 		return self.algo_list
