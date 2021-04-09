@@ -321,9 +321,4 @@ def createScatterPlot3d(n_clicks,data,featureX,featureY,featureZ,featureColor,fe
 
 if __name__ == '__main__':
 
-    #parser = argparse.ArgumentParser(description='Run the seed server.')
-    #parser.add_argument("-d", "--debug", required=False, help="running in debug mode?", default=False)
-    #args = vars(parser.parse_args())
-    #is_debug = args['debug']
-
-    app.run_server(debug=True)
+    app.run_server(debug=False)
