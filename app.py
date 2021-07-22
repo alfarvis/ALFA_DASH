@@ -27,6 +27,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.metrics import precision_recall_curve, average_precision_score, roc_curve, roc_auc_score
 from sklearn.linear_model import LogisticRegression
+import dash_auth
+
+# Basic dash auth
+# Keep this out of source code repository - save in a file or a database
+VALID_USERNAME_PASSWORD_PAIRS = {
+    'hello': 'world'
+}
 
 
 #import utils.figures as figs
@@ -45,6 +52,10 @@ app = dash.Dash(
     external_stylesheets=external_stylesheets
 )
 server = app.server
+auth = dash_auth.BasicAuth(
+    app,
+    VALID_USERNAME_PASSWORD_PAIRS
+)
 
 app.title = 'Alfarvis'
 algoClass = getAlgorithms()
