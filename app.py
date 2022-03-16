@@ -1,9 +1,12 @@
+from msilib.schema import Component
 import os  
 import time
 import importlib
 import base64
 import argparse
 import io
+from turtle import color
+from algorithms.DataPreprocessAlgo import DataPreprocessAlgo
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -23,12 +26,24 @@ from algorithms.box_VP import Box_VP
 from algorithms.violin_VP import Violin_VP
 from algorithms.pr_curve_VP import PR_Curve_VP
 from algorithms.roc_curve_VP import ROC_Curve_VP
+from algorithms.pca_VP import PCA_VP
+from algorithms.PcaAlgo import PcaAlgo
+from algorithms.tsne_VP import tSNE_VP
+from algorithms.tsneAlgo import TsneAlgo
+from algorithms.DataVis import DataVis
+from algorithms.BlandAltman import BlandAltman
+from algorithms.BlandAltmanAlgo import BlandAltmanAlgo
+from algorithms.isomap_VP import Isomap_VP
+from algorithms.IsomapAlgo import IsomapAlgo
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.metrics import precision_recall_curve, average_precision_score, roc_curve, roc_auc_score
 from sklearn.linear_model import LogisticRegression
 import dash_auth
-
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from algorithms import data
 # Basic dash auth
 # Keep this out of source code repository - save in a file or a database
 VALID_USERNAME_PASSWORD_PAIRS = {
@@ -56,10 +71,12 @@ auth = dash_auth.BasicAuth(
     app,
     VALID_USERNAME_PASSWORD_PAIRS
 )
-
+featureselection = html.Div(id='featureselection')
+featureselectionvis = html.Div(id='featureselectionvis')
+referencevis=html.Div(id='referencevis')
+reference=html.Div(id='reference')
 app.title = 'Alfarvis'
 algoClass = getAlgorithms()
-dataGuru = DataGuru()
 algo_list = algoClass.getAlgos()
 scatter2D_VP = Scatter2D_VP()
 scatter3D_VP = Scatter3D_VP()
@@ -68,7 +85,12 @@ box_VP = Box_VP()
 violin_VP = Violin_VP()
 pr_curve_VP = PR_Curve_VP()
 roc_curve_VP = ROC_Curve_VP()
-
+pca_VP = PCA_VP()
+blandAltman=BlandAltman()
+dataVis=DataVis()
+tsne_VP=tSNE_VP()
+isomap_VP=Isomap_VP()
+data.init()
 app.layout = html.Div(
     children=[
         # .container class is fixed, .container.scalable is scalable
@@ -141,11 +163,13 @@ app.layout = html.Div(
                                                     },
                                                     # Allow multiple files to be uploaded
                                                     multiple=False
-                                                ),
+                                                ),                  
+                                               
+                                        html.Div(id='upload-data-conformation')
+
                                     ]),                        
                                     html.Div(id='drgDrop'),
                                     dcc.Store(id='memory-output'),
-                                    
                                     drc.NamedDropdown(
                                         name="Select/Search Algorithm",
                                         id="algorithm",
@@ -154,8 +178,12 @@ app.layout = html.Div(
                                         searchable=True,
                                         value=None,
                                     ),
-                                    html.Hr(),    
-                                    html.Div(id="functionProperties")
+                                    
+                                    html.Hr(),
+                                    featureselection,reference,    
+                                    html.Div(id="functionProperties"),
+                                    
+                                    
                                                                             
                                     ],
                                 ),
@@ -170,23 +198,40 @@ app.layout = html.Div(
                           id="output_window",
                           className="two-thirds column row",
                           children=[
-                            dcc.Tabs(id="my-tabs",value="tab-1", children = [
-                                    dcc.Tab(label='Data',value='tab-2',
+                                        dcc.Tabs(id="my-tabs",value="tab-1", children = [
+                                        
+                                        dcc.Tab(label='Dashboard',value='tab-1',
+                                        children=[ 
+                                        drc.Card(  id='viscard',children=[
+                                        featureselectionvis,referencevis,
+                                        html.Div(id='get_vis'),
+                                          
+                                        html.Div(id="vis_table") ,
+                                        html.Div(id="vis_splom") ,
+                                        html.B("Here we will put visulization")] 
+                                        )]),
+                                        
+                                        dcc.Tab(label='Data',value='tab-2',
                                         children=[
-                                        html.Div(id='loaded_data_table'),
+                                            html.Div(id='filteration',children=[
+                                        data.getfilter()]),
+                                        html.Div(id='loaded_data_table')
                                         ]
                                         ),
-                                    dcc.Tab(label='Analysis',value='tab-1',
+                                        
+                                        dcc.Tab(label='Analysis',value='tab-3',
                                         children=[                                            
-                                            html.Div(id="algoRes")                                            
-                                            #html.Div(id='output_box_graph'),
-                                            #html.Div(id='output_bar_graph'),
-                                            #html.Div(id='output_scatter_graph'),
-                                            #html.Div(id='output_scatter_graph3d'),
+                                        html.Div(id="algoRes")                                            
+                                        #html.Div(id='output_box_graph'),
+                                        #html.Div(id='output_bar_graph'),
+                                        #html.Div(id='output_scatter_graph'),
+                                        #html.Div(id='output_scatter_graph3d'),
+                                        ]
+                                        ),
                                         ]
                                         )
-                                ]
-                                )
+                            
+                                
                             
                             
                             # drc.Cards('sample-cards')
@@ -201,64 +246,138 @@ app.layout = html.Div(
 
 
 @app.callback(    
-    Output(component_id='memory-output', component_property='data'),
+    [Output(component_id='memory-output', component_property='data'),  
+     Output('upload-data-conformation', 'children'),
+     Output('get_vis', 'children'),
+    ],
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename'),
-    State('upload-data', 'last_modified')])
-def upload_file(contents, filename, date):
+    State('upload-data', 'last_modified'),
+    State('featureselection','value'),
+    ])
+def upload_file(contents, filename, date,featureselection):
     if contents is not None:
+
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
         myData  = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-        return myData.to_dict('records')
+        myData.dropna(subset=myData.keys(),inplace=True)#changed by me
+        df=pd.DataFrame.from_records(myData)
+        data.dataGuru.setDF(df)
+        return [myData.to_dict('records'),html.A(str(filename).upper()+' UPLOADED',style={
+                                        "text-decoration": "none",
+                                        "color": "Green",
+                                        "line-height": "64px",
+                                    },), dataVis.getFeatureVis()]
+    else:
+        df=pd.DataFrame()
+        data.dataGuru.setDF(df)
+        return ['',html.A('DATA NOT UPLOADED',style={
+                                        "text-decoration": "none",
+                                        "color": "Red",
+                                         "line-height": "64px",
+                                    },),html.A(id='generate-visulization',children=[html.A(id='visfeatures')])]
 
 @app.callback(        
-    Output('loaded_data_table', 'children'),
-    [Input(component_id='memory-output', component_property='data')],
+    [   Output('filteration', 'children'),
+        Output('loaded_data_table', 'children'),],
+    [Input(component_id='memory-output', component_property='data'),
+     Input('generate-filtered-data', 'n_clicks')],
+    [
+        State('filtfeatures','value'),
+        State('filtoperation','value'),
+        State('inputvalue','value')
+    ]
     )
-def update_table(data):
+def update_table(data1,n_clicks,filtfeatures,filtoperation,inputvalue):
     
-    if data is None:
+    if data1 is None:
         raise PreventUpdate
-    print(data[0].keys())
-    df = pd.DataFrame.from_records(data)
-    print('here')
-    dataGuru.setDF(df)
-
-    return html.Div([dash_table.DataTable(
-        id='table',
-        columns=[{"name": i, "id": i} for i in df.columns],
-        data=df.to_dict('records'),
-        )])
+    
+    if n_clicks>0 and filtfeatures!=None and filtoperation!=None and inputvalue!=None:
+        print('hello')
+        df = data.dataGuru.getDF()
+        if filtoperation=='=':
+            df=df[df[filtfeatures]==inputvalue]
+        elif filtoperation=='>':
+            df=df[df[filtfeatures]>inputvalue]
+        elif filtoperation=='<':
+            df=df[df[filtfeatures]<inputvalue]
+        elif filtoperation=='<=':
+            df=df[df[filtfeatures]<=inputvalue]
+        elif filtoperation=='>=':
+            df=df[df[filtfeatures]>=inputvalue]
+        
+        print(df)
+        data.dataGuru.setDF(df)
+        return data.getfilter(),data.getTable()
+    else:
+        # print(data1[0].keys())
+        #df = pd.DataFrame.from_records(data1)
+        # print('here')
+        # data.dataGuru.setDF(df)
+        #print(data.dataGuru.getDF())
+        return data.getfilter(),data.getTable()
 
 # Algorithm Selection
 @app.callback(    
-    [Output('functionProperties', 'children'),
+    [
+    Output('functionProperties', 'children'),
     Output('algoRes', 'children'),
     ],
-    [Input(component_id='algorithm', component_property='value')],    
+    [
+    Input('upload-data', 'contents'),
+    Input(component_id='algorithm', component_property='value')
+    ],    
     )
-def algorithmProps(algorithm):
+def algorithmProps(content,algorithm):
     
-    df = dataGuru.getDF()
+    df = data.dataGuru.getDF()
     options = [{'label':i,'value':i} for i in df.columns]
-    if algorithm in 'barPlot':
+    if algorithm==None:
+        return ['','']
+    if algorithm == 'barPlot':
         return bar_VP.getAlgoProps(options,colorscales), html.Div(id='output_bar_graph')
-    if algorithm in 'boxPlot':
+    if algorithm == 'boxPlot':
         return box_VP.getAlgoProps(options,colorscales), html.Div(id='output_box_graph')
-    if algorithm in 'violinPlot':
+    if algorithm == 'violinPlot':
         return violin_VP.getAlgoProps(options,colorscales), html.Div(id='output_violin_graph')
-    if algorithm in 'scatter2D':                
+    if algorithm == 'scatter2D':                
         return scatter2D_VP.getAlgoProps(options,colorscales), html.Div(id='output_scatter_graph')
-    if algorithm in 'scatter3D':        
+    if algorithm == 'scatter3D':        
         return scatter3D_VP.getAlgoProps(options,colorscales), html.Div(id='output_scatter_graph3d')
-    if algorithm in 'pr_curve_VP':        
+    if algorithm == 'pr_curve_VP':        
         return pr_curve_VP.getAlgoProps(options,colorscales), [html.Div(id='output_pr_curve'), html.Div(id="algoRes_Table")]
-    if algorithm in 'roc_curve_VP':        
+    if algorithm == 'roc_curve_VP':        
         return roc_curve_VP.getAlgoProps(options,colorscales), [html.Div(id='output_roc_curve'), html.Div(id="algoRes_Table_ROC")]
+    if algorithm == 'pca_VP':        
+        return pca_VP.getAlgoProps(options,colorscales), [html.Div(id='output_pca_graph'),html.Div(id="algoRes_Table_PCA"),html.Div(id='output_pca_screePlot')]
+    if algorithm == 'blandAltman':        
+        return blandAltman.getAlgoProps(options,colorscales), [html.Div(id='output_blandAltman_analysis')]
+    if algorithm == 'tsne_VP':        
+        return tsne_VP.getAlgoProps(options,colorscales), [html.Div(id='output_tsne_analysis')]
+    if algorithm == 'isomap_VP':        
+        return isomap_VP.getAlgoProps(options,colorscales), [html.Div(id='output_isomap_analysis')]
+
+
+
+# @app.callback(   
+#                   Output('aaaa', 'children'),
+ 
+#     [
+#     Input(component_id = 'table',component_property='data'),    
+#     ]
+#     )
+# def updatedataset(data):
+#     data.dataGuru.setDF(data)    
+    
+
+# @app.callback(Output(''))
+
+
+
 
 # Algorithmic implementations
-
 @app.callback(
     Output('subClass','options'),    
     [
@@ -266,7 +385,7 @@ def algorithmProps(algorithm):
     ]
     )
 def getSubClasses(featureColor):
-    df = dataGuru.getDF()    
+    df = data.dataGuru.getDF()    
     a=np.unique(df[featureColor])
     uniqVals = [{'label':i,'value':i} for i in a]
     #uniqVals = [str(i) for i in a]
@@ -274,6 +393,28 @@ def getSubClasses(featureColor):
     return uniqVals
 
 
+         
+
+#BLANDALTMAN
+@app.callback(
+    Output('output_blandAltman_analysis','children'),
+    [Input('generate-BlandAltman-Analysis','n_clicks'),],
+    [
+    State('method1BlandAltman','value'),    
+    State('method2BlandAltman','value'),
+    ]
+    )
+def BlandAltmanAnalysis(n_clicks,method1BlandAltman,method2BlandAltman):
+    print(n_clicks)
+    if n_clicks>0:
+        df = data.dataGuru.getDF()
+        blandAltmanAlgo=BlandAltmanAlgo(df,method1BlandAltman,method2BlandAltman)
+        return blandAltmanAlgo.getAnswer()
+    else :
+        return ''      
+
+
+#PR CURVE
 @app.callback(
     [Output('output_pr_curve','children'),
     Output('algoRes_Table', 'children')],
@@ -289,7 +430,7 @@ def getSubClasses(featureColor):
 def createPRPlot(n_clicks,featureX,featureColor,subClass,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = dataGuru.getDF()
+        df = data.dataGuru.getDF()
         df2 = pd.DataFrame()
         df2['Feature'] = []
         f1 = [];
@@ -361,7 +502,7 @@ def createPRPlot(n_clicks,featureX,featureColor,subClass,colorscale):
     ]
     )
 def getSubClasses(featureColor):
-    df = dataGuru.getDF()    
+    df = data.dataGuru.getDF()    
     a=np.unique(df[featureColor])
     uniqVals = [{'label':i,'value':i} for i in a]
     #uniqVals = [str(i) for i in a]
@@ -383,7 +524,7 @@ def getSubClasses(featureColor):
 def createROCPlot(n_clicks,featureX,featureColor,subClass,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = dataGuru.getDF()
+        df = data.dataGuru.getDF()
         df2 = pd.DataFrame()
         df2['Feature'] = []
         f1 = [];
@@ -463,7 +604,7 @@ def createROCPlot(n_clicks,featureX,featureColor,subClass,colorscale):
 def createBarPlot(n_clicks,featureX,featureY,featureColor,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = dataGuru.getDF()
+        df = data.dataGuru.getDF()
         fig = px.bar(df, x=featureX, y=featureY, color=featureColor, color_continuous_scale=colorscale)                
         return html.Div([
             dcc.Graph(
@@ -482,10 +623,10 @@ def createBarPlot(n_clicks,featureX,featureY,featureColor,colorscale):
     State('colorscale','value'),
     ]
     )
-def createBarPlot(n_clicks,featureX,featureY,featureColor,colorscale):
+def createViolinPlot(n_clicks,featureX,featureY,featureColor,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = dataGuru.getDF()
+        df = data.dataGuru.getDF()
         fig = px.violin(df, x=featureX, y=featureY, color=featureColor)                
         return html.Div([
             dcc.Graph(
@@ -508,7 +649,7 @@ def createBarPlot(n_clicks,featureX,featureY,featureColor,colorscale):
 def createBoxPlot(n_clicks,featureX,featureY,featureColor,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = dataGuru.getDF()
+        df = data.dataGuru.getDF()
         fig = px.box(df, x=featureX, y=featureY, color=featureColor)                
         return html.Div([
             dcc.Graph(
@@ -517,7 +658,128 @@ def createBoxPlot(n_clicks,featureX,featureY,featureColor,colorscale):
                 )
             ])
         
+
+
+#select all for algorithms
+@app.callback(
+    Output('features','children'),
+Input(component_id='selectall',component_property='value'),
+    [State('reference','value'),]
+)
+def Selcectall(selectall,reference):
+    df = data.dataGuru.getDF()
+    options = [{'label':i,'value':i} for i in df.columns]
+    value=None
+    line=''
+    if selectall!=[]:
+        value=list(df.columns)
+        if reference!=None and reference in value:
+            value.remove(reference)
+
+        line='You have selected All features'
         
+    return html.Div([html.B(line),drc.NamedDropdown(name="Features", 
+                    id='featureselection',                                        
+                    clearable=True,
+                    searchable=True,
+                    options=options,
+                    value=value,
+                    multi=True,
+                    )])
+
+#select all for dashboard
+@app.callback(
+    Output('featuresvis','children'),
+Input(component_id='selectallvis',component_property='value'),
+    [State('referencevis','value'),]
+)
+def Selcectall(selectall,reference):
+    df = data.dataGuru.getDF()
+    options = [{'label':i,'value':i} for i in df.columns]
+    value=None
+    line=''
+    if selectall!=[]:
+        value=list(df.columns)
+        if reference!=None and reference in value:
+            value.remove(reference)
+
+        line='You have selected All features'
+        
+    return html.Div([html.B(line),drc.NamedDropdown(name="Features", 
+                    id='featureselectionvis',                                        
+                    clearable=True,
+                    searchable=True,
+                    options=options,
+                    value=value,
+                    multi=True,
+                    )])                       
+#TSNE ANALYSIS
+@app.callback(
+    Output('output_tsne_analysis','children'),
+    Input('generate-tsne-analysis','n_clicks'),
+    [
+    State('featureselection','value'),
+    State('reference','value'),    
+    State('perplexityTsne','value'),
+    State('iterationTsne','value'),
+    ]
+    )
+def TsneAnalysis(n_clicks,featureselection,reference,perplexityTsne,iterationTsne):
+    print(n_clicks)
+    if n_clicks>0:
+        df = data.dataGuru.getDF()
+        tsneAlgo=TsneAlgo(df,featureselection,reference,perplexityTsne,iterationTsne)
+        return tsneAlgo.getAnswer()
+    else :
+        return ''      
+
+
+#PCA ANALYSIS        
+@app.callback(
+    [Output('output_pca_graph','children'),
+     Output('algoRes_Table_PCA', 'children'),
+     Output('output_pca_screePlot','children'),],
+    [Input('generate-pca-analysis','n_clicks'),],
+    [State('featureselection','value'),
+     State('reference','value'),
+     State('plotdimensionPca','value'),
+     ]
+    )
+def PcaAnalysis(n_clicks,featureselection,reference,plotdimensionPca):
+    print(n_clicks) 
+    if n_clicks>0 :
+        df = data.dataGuru.getDF()
+        pca=PcaAlgo(df,featureselection,reference,plotdimensionPca)
+        return pca.getPcaAnalysis()
+    else :
+        return ['','','']
+
+
+#ISOMAP ANALYSIS        
+@app.callback(
+    Output('output_isomap_analysis','children'),
+    [
+    Input('generate-isomap-analysis','n_clicks'),
+    ],
+    
+    [
+    State('featureselection','value'),
+    State('reference','value'),
+    State('n_neighbors','value'),
+    ]
+
+    )
+def IsomapAnalysis(n_clicks,featureselection,reference,n_neighbors):
+    print(n_clicks)
+    if n_clicks>0: 
+        df = data.dataGuru.getDF()
+        isomap=IsomapAlgo(df,featureselection,reference,n_neighbors)
+        return isomap.getIsomapAnalysis()
+    else :
+        return ['']
+        
+    
+    
 @app.callback(
     Output('output_scatter_graph','children'),
     [Input('generate-scatter-plot','n_clicks'),
@@ -535,7 +797,7 @@ def createScatterPlot(n_clicks,featureX,featureY,featureColor,featureHover,featu
     print(n_clicks)
     if n_clicks>0: 
         #df = pd.DataFrame.from_records(data)                    
-        df = dataGuru.getDF()
+        df = data.dataGuru.getDF()
         if featureHover is not None:
             if type(featureHover) != list:
                 featureHover = [featureHover]
@@ -566,7 +828,7 @@ def createScatterPlot3d(n_clicks,featureX,featureY,featureZ,featureColor,feature
     print(n_clicks)
     if n_clicks>0: 
         #df = pd.DataFrame.from_records(data)                    
-        df = dataGuru.getDF()
+        df = data.dataGuru.getDF()
         if featureHover is not None:
             if type(featureHover) != list:
                 featureHover = [featureHover]
@@ -579,6 +841,28 @@ def createScatterPlot3d(n_clicks,featureX,featureY,featureZ,featureColor,feature
             ],
         style = {'display': 'inline-block', 'width': '90%', 'height': '90%'}
             )
+
+# Visualization Implementation
+@app.callback(
+    [Output('vis_table','children'),Output('vis_splom','children')   
+   ], [ 
+    Input('generate-visulization','n_clicks') ,
+    ],
+    [State('featureselectionvis','value'),State('referencevis','value'),State('upload-data', 'filename'),],
+    )
+
+def getvisulization(n_clicks,featureselection,referencevis,filename):
+    print(n_clicks)
+    if n_clicks!= None and n_clicks>0 and featureselection!=None:
+        df = data.dataGuru.getDF()
+        DataPre=DataPreprocessAlgo()
+        vistable,fig=DataPre.getdescri(featureselection,referencevis,filename)
+        #print(vistable)
+        #fig = px.scatter_matrix(df)
+        #fig.show()
+        return [vistable ,fig]
+    else :
+        return ['','']
 
 
 #@app.callback(
