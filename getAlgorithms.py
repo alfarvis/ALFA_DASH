@@ -11,7 +11,7 @@ class getAlgorithms:
 		{'label': 'Visualization: Bland Altman','value':'blandAltman'},
 		
 		{'label': 'Visualization ML: tSNE','value':'tsne_VP'},
-		{'label': 'Visualization ML: PCA','value':'pca_VP'},
+		{'label': 'Visualization ML: PCA','value':'pca_VP'},#done
 		{'label': 'Visualization ML: Isomap','value':'isomap_VP'},
 		{'label': 'Visualization ML: Diffusion Map','value':'dfm_VP'},
 		{'label': 'Visualization ML: LLE','value':'lle_VP'},
