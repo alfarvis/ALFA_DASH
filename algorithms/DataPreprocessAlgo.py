@@ -9,6 +9,7 @@ import dash_table
 from algorithms import data
 import plotly.graph_objs as go
 import plotly.express as px
+from sklearn import utils
 
 
 class DataPreprocessAlgo :
@@ -22,15 +23,37 @@ class DataPreprocessAlgo :
             return html.Div('please select features'),''
         df=self.df
         df2=self.df.describe()
-        print(option)
+        #print(option)
         #print([str(i) for i in df2.index])
         df3=pd.DataFrame()
+        if reference==None:
+            ans_ref = [html.B('Please select reference')]
+        elif str(utils.multiclass.type_of_target(df[reference]))=='continuous':
+            ans_ref = [html.B('Reference is Continuos variable')]    
+        else :
+            
+            y=(df[reference])
+            
+            labels=list(y.unique())
+            y=list(y)
+            a=pd.DataFrame()
+            a['labels']=['count']
 
-        
+            for i in labels:
+                a[str(i)]=[y.count(i)]
+            labels.insert(0,'labels')
+            #print(a)   
+            
+            ans_ref=[html.B('Table for the reference'),dash_table.DataTable(
+                id='refvistable',
+                columns=[{"name": str(i), "id": str(i)} for i in labels],
+                data=a.to_dict('records'),
+                style_table={'height': 'auto', 'overflowY': 'auto','minWidth': '100%'},
+                )]
         for i in list(option):
             df3[i]=df2[i]
 
-        df3.insert(0, "",[str(i) for i in df2   .index], True)
+        df3.insert(0, "",[str(i) for i in df2.index], True)
         df3=df3.round(decimals=2)
         vistable=df3
         color=None
@@ -40,7 +63,7 @@ class DataPreprocessAlgo :
             index_vals = df[reference].astype('category').cat.codes
 
         dim=[dict(label=str(i),values=df[str(i)]) for i in option]
-        print(index_vals)
+        #print(index_vals)
         fig = go.Figure(data=go.Splom(
                 dimensions=[dict(label=str(i),values=df[str(i)]) for i in option],
                 text=index_vals,
@@ -59,7 +82,7 @@ class DataPreprocessAlgo :
         )
         #fig.show()
         
-        return html.Div([dash_table.DataTable(
+        vistable=dash_table.DataTable(
         id='table',
         columns=[{"name": i, "id": i} for i in vistable.columns],
         data=vistable.to_dict('records'),      
@@ -87,7 +110,10 @@ class DataPreprocessAlgo :
         'color': 'black',
         'fontWeight': 'bold'
         },
-        )],),html.Div(dcc.Graph(
+        )
+        
+        
+        return html.Div(children=[vistable,html.Div(ans_ref)]),html.Div(dcc.Graph(
                 id='example-graph',
                 figure=fig,))
 

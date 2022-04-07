@@ -1,0 +1,11 @@
+.colhalf2 {
+    float: left;
+    width: 50%;
+  }
+  
+  /* Clear floats after the columns */
+  .rowhalf2:after {
+    content: "";
+    display: table;
+    clear: both;
+  }

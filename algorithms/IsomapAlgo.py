@@ -10,17 +10,19 @@ import dash_html_components as html
 import dash_table
 from sklearn import manifold
 from sklearn.preprocessing import StandardScaler
-
+from algorithms import data
 
 
 class IsomapAlgo:
     
-    def __init__(self,data,features,reference,n_neighbors):
+    def __init__(self,features,reference,n_neighbors,plotdimension):
         self.reference=reference
         self.features=features  
-        self.df3=data
+        self.df3=data.dataGuru.getDF()
         self.df=pd.DataFrame()
         self.n_neighbors=n_neighbors
+        self.plotdimension=plotdimension
+        
         for i in features:
             self.df[i]=self.df3[i]
         if reference!=None:
@@ -53,24 +55,30 @@ class IsomapAlgo:
         
         if n_component<2:
             return [html.B(possible_pc),html.B(),html.B()]        
-            
+        
         else:
-            
             #fitting
-            x_pca = manifold.Isomap(n_components=2,n_neighbors=self.n_neighbors).fit_transform(self.df)
+            x_pca = manifold.Isomap(n_components=self.plotdimension,n_neighbors=self.n_neighbors).fit_transform(self.df)
             pc=['Component'+str(i) for i in range(n_component)]
             
             # scatterplot be    tween pc1 and pc2 
             pca_df=pd.DataFrame()
             pca_df['Component1']=x_pca[:,0]
             pca_df['Component2']=x_pca[:,1]
-            pca_df['reference']=df2['reference']
-            fig1 = px.scatter(pca_df,x=pca_df['Component1'], y=pca_df['Component2'],color=pca_df['reference'], title="ISOMAP Graph")    
-
+            pca_df['reference']=list(df2['reference'])
+            print(  (df2['reference']))
+            if n_component>2 and self.plotdimension==3 :
+                    pca_df['Component3']=x_pca[:,2]
+                    fig1 = px.scatter_3d(pca_df,x=pca_df['Component1'], y=pca_df['Component2'],z=pca_df['Component3'],color=pca_df['reference'], title="ISOMAP Graph")    
+                    plotdis="Here 3D ISOMAP between component1, component2 and component3 is"
             
+            else:
+                fig1 = px.scatter(pca_df,x=pca_df['Component1'], y=pca_df['Component2'],color=pca_df['reference'], title="ISOMAP Graph")    
+                plotdis="Here 2D ISOMAP between component1 and component2 is"
+                            
             return [
                 #return possible number of pc
-                html.Div((html.Br(),html.Div("Here 2D ISOMAP between component1 and component2 is"),
+                html.Div((html.Br(),html.Div(plotdis),
                 #return 2D scatterplot between pc1 and pc2          
                 dcc.Graph(
                 id='example-graph',
