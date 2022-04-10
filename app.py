@@ -1,24 +1,25 @@
-from msilib.schema import Component
 import os  
 import time
 import importlib
 import base64
 import argparse
 import io
-from turtle import color
-from algorithms.DataPreprocessAlgo import DataPreprocessAlgo
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
 import numpy as np
-from dash.dependencies import Input, Output, State
 import pandas as pd
 import networkx as nx
+from turtle import color
+import dash
+import dash_auth
 import dash_table
+import dash_core_components as dcc
+import dash_html_components as html
+import dash_bootstrap_components as dbc
+from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import utils.dash_reusable_components as drc
 from getAlgorithms import getAlgorithms
 from DataGuru import DataGuru
+from algorithms.DataPreprocessAlgo import DataPreprocessAlgo
 from algorithms.scatter2D_VP import Scatter2D_VP
 from algorithms.scatter3D_VP import Scatter3D_VP
 from algorithms.bar_VP import Bar_VP
@@ -35,15 +36,27 @@ from algorithms.BlandAltman import BlandAltman
 from algorithms.BlandAltmanAlgo import BlandAltmanAlgo
 from algorithms.isomap_VP import Isomap_VP
 from algorithms.IsomapAlgo import IsomapAlgo
+from algorithms.DecisionTree_VP import DecisionTree_VP
+from algorithms.DecisionTreeAlgo import DecisionTreeAlgo
+from algorithms.RandomForest_VP import RandomForest_VP
+from algorithms.RandomForestAlgo import RandomForestAlgo 
+from algorithms.SVM_VP import SVM_VP
+from algorithms.SVMAlgo import SVMAlgo
+from algorithms.AutoML_VP import AutoML_VP
+from algorithms.AutoMLAlgo import AutoMLAlgo
+from algorithms.LogisticRegression_VP import LogisticRegression_VP
+from algorithms.LogisticRegressionAlgo import LogisticRegressionAlgo
+from algorithms.ArtificialNeuralNetworks_VP import ArtificialNeuralNetworks_VP
+from algorithms.ArtificialNeuralNetworksAlgo import ArtificialNeuralNetworksAlgo
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.metrics import precision_recall_curve, average_precision_score, roc_curve, roc_auc_score
 from sklearn.linear_model import LogisticRegression
-import dash_auth
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from algorithms import data
+
 # Basic dash auth
 # Keep this out of source code repository - save in a file or a database
 VALID_USERNAME_PASSWORD_PAIRS = {
@@ -53,7 +66,7 @@ VALID_USERNAME_PASSWORD_PAIRS = {
 
 #import utils.figures as figs
 colorscales = px.colors.named_colorscales()
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css','./assets/grid.css']
 
 def path(filename):
     parent = os.path.dirname(__file__)
@@ -90,6 +103,12 @@ blandAltman=BlandAltman()
 dataVis=DataVis()
 tsne_VP=tSNE_VP()
 isomap_VP=Isomap_VP()
+decisionTree_VP=DecisionTree_VP()
+randomForest_VP=RandomForest_VP()
+svm_VP=SVM_VP()
+autoML_VP=AutoML_VP()
+logisticRegression_VP=LogisticRegression_VP()
+artificialNeuralNetworks_VP=ArtificialNeuralNetworks_VP()
 data.init()
 app.layout = html.Div(
     children=[
@@ -308,7 +327,7 @@ def update_table(data1,n_clicks,filtfeatures,filtoperation,inputvalue):
         elif filtoperation=='>=':
             df=df[df[filtfeatures]>=inputvalue]
         
-        print(df)
+        #print(df)
         data.dataGuru.setDF(df)
         return data.getfilter(),data.getTable()
     else:
@@ -358,8 +377,19 @@ def algorithmProps(content,algorithm):
         return tsne_VP.getAlgoProps(options,colorscales), [html.Div(id='output_tsne_analysis')]
     if algorithm == 'isomap_VP':        
         return isomap_VP.getAlgoProps(options,colorscales), [html.Div(id='output_isomap_analysis')]
-
-
+    if algorithm == 'dt_VP':
+        return decisionTree_VP.getAlgoProps(colorscales), html.Div(id='output_decisiontree_analysis')
+    if algorithm == 'rf_VP':
+        return randomForest_VP.getAlgoProps(colorscales), html.Div(id='output_randomforest_analysis')
+    if algorithm == 'svm_VP':
+        return svm_VP.getAlgoProps(colorscales), html.Div(id='output_svm_analysis')
+    if algorithm == 'automl_VP':
+        return autoML_VP.getAlgoProps(colorscales), html.Div(id='output_automl_analysis')
+    if algorithm == 'logreg_VP':
+        return logisticRegression_VP.getAlgoProps(colorscales), html.Div(id='output_logisticregression_analysis')
+    if algorithm == 'ann_VP':
+        return artificialNeuralNetworks_VP.getAlgoProps(colorscales), html.Div(id='output_artificialneuralnetworks_analysis')
+        
 
 # @app.callback(   
 #                   Output('aaaa', 'children'),
@@ -661,11 +691,7 @@ def createBoxPlot(n_clicks,featureX,featureY,featureColor,colorscale):
 
 
 #select all for algorithms
-@app.callback(
-    Output('features','children'),
-Input(component_id='selectall',component_property='value'),
-    [State('reference','value'),]
-)
+@app.callback(Output('features','children'),Input(component_id='selectall',component_property='value'),[State('reference','value'),])
 def Selcectall(selectall,reference):
     df = data.dataGuru.getDF()
     options = [{'label':i,'value':i} for i in df.columns]
@@ -690,9 +716,9 @@ def Selcectall(selectall,reference):
 #select all for dashboard
 @app.callback(
     Output('featuresvis','children'),
-Input(component_id='selectallvis',component_property='value'),
+    Input(component_id='selectallvis',component_property='value'),
     [State('referencevis','value'),]
-)
+            )
 def Selcectall(selectall,reference):
     df = data.dataGuru.getDF()
     options = [{'label':i,'value':i} for i in df.columns]
@@ -766,20 +792,272 @@ def PcaAnalysis(n_clicks,featureselection,reference,plotdimensionPca):
     State('featureselection','value'),
     State('reference','value'),
     State('n_neighbors','value'),
+    State('plotdimensionisomap','value'),
     ]
 
     )
-def IsomapAnalysis(n_clicks,featureselection,reference,n_neighbors):
+def IsomapAnalysis(n_clicks,featureselection,reference,n_neighbors,plotdimension):
     print(n_clicks)
     if n_clicks>0: 
-        df = data.dataGuru.getDF()
-        isomap=IsomapAlgo(df,featureselection,reference,n_neighbors)
+        isomap=IsomapAlgo(featureselection,reference,n_neighbors,plotdimension)
         return isomap.getIsomapAnalysis()
     else :
         return ['']
         
+
+#lock one field and unlock other one based on selected filed
+@app.callback(
+        [Output('selection','children'),Output('buttonspace','children'),],
+        Input(component_id='setcreation',component_property='value'),
+        State(component_id='algorithm', component_property='value'),
+        )
+def SelectOne(setcreation,algorithm):
+    df=data.dataGuru.getDF()
+    options=df.columns
+    options=[{'label':i,'value':i} for i in options]
+    
+    x,y=df.shape
+    fvalue=False
+    svalue=True
+    if setcreation!='cross':
+        fvalue=True 
+        svalue=False
     
     
+    folds=[{'label':i,'value':i} for i in range(1,x//2)]
+    percentage=[{'label':i,'value':i} for i in range(1,99)]
+        
+        
+		# {'label': 'Machine Learning: SVM','value':'svm_VP'},
+		# {'label': 'Machine Learning: Logistic Regression','value':'logreg_VP'},
+		# {'label': 'Machine Learning: Decision Trees','value':'dt_VP'},
+		# {'label': 'Machine Learning: Random Forest','value':'rf_VP'},
+		# {'label': 'Machine Learning: AutoML','value':'automl_VP'},
+		# {'label': 'Machine Learning: Artificial Neural Networks','value':'ann_VP'},
+
+            
+    if algorithm == 'dt_VP':
+        idvalue='generate-decisiontree-analysis'
+        buttonvalue='Decision Tree Analysis'
+    if algorithm == 'rf_VP':
+        idvalue='generate-randomforest-analysis'
+        buttonvalue='RandomForest Analysis'
+    if algorithm == 'automl_VP':
+        idvalue='generate-automl-analysis'
+        buttonvalue='AutoML Analysis'
+    if algorithm == 'ann_VP':
+        idvalue='generate-artificialneuralnetworks-analysis'
+        buttonvalue='Artificial Neural Networks Analysis'
+    if algorithm == 'svm_VP':
+        idvalue='generate-svm-analysis'
+        buttonvalue='SVM Analysis'
+    if algorithm == 'logreg_VP':
+        idvalue='generate-logisticregression-analysis'
+        buttonvalue='Logistic Regression Analysis'
+    
+    
+    return [html.Div(       drc.NamedDropdown(name="Folds",
+                            id="numfolds",                                            
+                            clearable=True,
+                            searchable=True,
+                            options=folds,
+                            value=10,
+                            multi=False,
+                            disabled=fvalue
+                            ),),
+                            html.Div(
+                            drc.NamedDropdown(name="%",
+                            id="splitvalue",                                            
+                            clearable=True,
+                            searchable=True,
+                            options=percentage,
+                            value=70,
+                            multi=False,
+                            disabled=svalue,
+                            ),),],  html.Button(buttonvalue, id=idvalue,n_clicks=0)
+
+# We can use input type instand of dropdown
+    # [html.Div(        dcc.Input(
+    #             id="foldvalue", type="number", placeholder="folds",
+    #             min=1, max=x//2, step=1,disabled=fvalue,
+    #         ),),
+    #                             html.Div(
+    #                      dcc.Input(
+    #             id="splitvlaue", type="number", placeholder="%",
+    #             min=1, max=100, step=1,disabled=svalue,
+    #         ),),]
+
+
+
+#Decision Tree ANALYSIS        
+@app.callback(
+    Output('output_decisiontree_analysis','children'),
+    [
+    Input('generate-decisiontree-analysis','n_clicks'),
+    ],
+    
+    [
+    State('featureselection','value'),
+    State('reference','value'),
+    State('numfolds','value'),
+    State('splitvalue','value'),
+    State('setcreation','value'),
+    State('max_depth','value')
+    ]
+
+    )
+def DecisionTreeAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreation,max_depth):
+    
+    
+    print(n_clicks)
+    if n_clicks>0:
+        decisiontree=DecisionTreeAlgo(featureselection,reference,numfolds,splitvalue,setcreation,max_depth)
+        return decisiontree.getDecisionTreeAnalysis()
+    else :
+        return ['']
+        
+#RandomForest ANALYSIS        
+@app.callback(
+    Output('output_randomforest_analysis','children'),
+    [
+    Input('generate-randomforest-analysis','n_clicks'),
+    ],
+    
+    [
+    State('featureselection','value'),
+    State('reference','value'),
+    State('numfolds','value'),
+    State('splitvalue','value'),
+    State('setcreation','value'),
+    State('n_estimators','value'),
+    State('max_depth','value'),
+    
+    ]
+
+    )
+def RandomForestAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreation,n_estimators,max_depth):
+    
+    
+    print(n_clicks)
+    if n_clicks>0:
+        randomforest=RandomForestAlgo(featureselection,reference,numfolds,splitvalue,setcreation,n_estimators,max_depth)
+        return randomforest.getRandomForestAnalysis()
+    else :
+        return ['']
+    
+    
+#SVM ANALYSIS        
+@app.callback(
+    Output('output_svm_analysis','children'),
+    [
+    Input('generate-svm-analysis','n_clicks'),
+    ],
+    
+    [
+    State('featureselection','value'),
+    State('reference','value'),
+    State('numfolds','value'),
+    State('splitvalue','value'),
+    State('setcreation','value'),
+    State('kernel','value'),
+    State('degree','value')
+    
+    ]
+
+    )
+def SVMAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreation,kernel,degree):
+    
+    
+    print(n_clicks)
+    if n_clicks>0:
+        svmAlgo=SVMAlgo(featureselection,reference,numfolds,splitvalue,setcreation,kernel,degree)
+        return svmAlgo.getSVMAnalysis()
+    else :
+        return ['']
+
+
+
+#AutoML ANALYSIS        
+@app.callback(
+    Output('output_automl_analysis','children'),
+    [
+    Input('generate-automl-analysis','n_clicks'),
+    ],
+    
+    [
+    State('featureselection','value'),
+    State('reference','value'),
+    State('numfolds','value'),
+    State('splitvalue','value'),
+    State('setcreation','value')
+    ]
+
+    )
+def DecisionTreeAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreation):
+    
+    
+    print(n_clicks)
+    if n_clicks>0:
+        automl=AutoMLAlgo(featureselection,reference,numfolds,splitvalue,setcreation)
+        return automl.getAutoMLAnalysis()
+    else :
+        return ['']
+
+
+#Artificial Neural Networks ANALYSIS        
+@app.callback(
+    Output('output_artificialneuralnetworks_analysis','children'),
+    [
+    Input('generate-artificialneuralnetworks-analysis','n_clicks'),
+    ],
+    
+    [
+    State('featureselection','value'),
+    State('reference','value'),
+    State('numfolds','value'),
+    State('splitvalue','value'),
+    State('setcreation','value')
+    ]
+
+    )
+def ArtificialNeuralNetworksAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreation):
+    
+    print(n_clicks)
+    if n_clicks>0:
+        artificialneuralnetworks=ArtificialNeuralNetworksAlgo(featureselection,reference,numfolds,splitvalue,setcreation)
+        return artificialneuralnetworks.getArtificialNeuralNetworksAnalysis()
+    else :
+        return ['']
+
+
+#Logistic Regression ANALYSIS        
+@app.callback(
+    Output('output_logisticregression_analysis','children'),
+    [
+    Input('generate-logisticregression-analysis','n_clicks'),
+    ],
+    
+    [
+    State('featureselection','value'),
+    State('reference','value'),
+    State('numfolds','value'),
+    State('splitvalue','value'),
+    State('setcreation','value')
+    ]
+
+    )
+def LogisticRegressionAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreation):
+    
+    
+    print(n_clicks)
+    if n_clicks>0:
+        logisticregression=LogisticRegressionAlgo(featureselection,reference,numfolds,splitvalue,setcreation)
+        return logisticregression.getLogisticRegressionAnalysis()
+    else :
+        return ['']
+
+
+#scatterplot    
 @app.callback(
     Output('output_scatter_graph','children'),
     [Input('generate-scatter-plot','n_clicks'),
@@ -850,7 +1128,6 @@ def createScatterPlot3d(n_clicks,featureX,featureY,featureZ,featureColor,feature
     ],
     [State('featureselectionvis','value'),State('referencevis','value'),State('upload-data', 'filename'),],
     )
-
 def getvisulization(n_clicks,featureselection,referencevis,filename):
     print(n_clicks)
     if n_clicks!= None and n_clicks>0 and featureselection!=None:
@@ -877,5 +1154,4 @@ def getvisulization(n_clicks,featureselection,referencevis,filename):
 
 
 if __name__ == '__main__':
-
     app.run_server(debug=True)

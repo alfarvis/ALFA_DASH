@@ -34,6 +34,15 @@ class Isomap_VP:
                                         value=None,
                                         multi=False
                                     ),
+            drc.NamedDropdown(name="Plot dimension",
+                        id="plotdimensionisomap",                                            
+                        clearable=True,
+                        searchable=True,
+                        multi=False,
+                        options=[{'label': '2D', 'value':2},{'label': '3D', 'value':3}],
+                        value=None,
+                        ),
+            
                drc.NamedDropdown(name="Number of neighbors",
                         id="n_neighbors",                                            
                         clearable=True,
