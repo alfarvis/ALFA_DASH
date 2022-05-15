@@ -1,35 +1,31 @@
-import os  
-import time
-import importlib
-import base64
-import argparse
-import io
 import dash
+import dash_table
+from dash.exceptions import PreventUpdate
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
-import numpy as np
 from dash.dependencies import Input, Output, State
+
+import numpy as np
 import pandas as pd
 import networkx as nx
-import dash_table
-from dash.exceptions import PreventUpdate
 import utils.dash_reusable_components as drc
-from getAlgorithms import getAlgorithms
+
 from DataGuru import DataGuru
-from algorithms.DataPreprocessAlgo import DataPreprocessAlgo
-from algorithms import data
+
 class DecisionTree_VP:
 
     @staticmethod
-    def getAlgoProps(colorscales):        
-        df=data.dataGuru.getDF()
+
+    def getAlgoProps(colorscales,globalData):        
+
+        df=globalData.dataGuru.getDF()
         options=df.columns
         options=[{'label':i,'value':i} for i in options]
+
         x,y=df.shape
+
         return html.Div([
-
-
                         drc.NamedDropdown(name="Reference",
                         id="reference",                                            
                         clearable=True,
@@ -41,12 +37,13 @@ class DecisionTree_VP:
                         
                         html.Div(id='features'),
                         
-                         dcc.Checklist(
+                        dcc.Checklist(
                         id='selectall',
                         options=[{'label': 'All features', 'value':'ALL'}],
                         value=[],
                         ),
-                         
+                        
+                        #max for max_depth is number of rows 
                         drc.NamedDropdown(name="max_depth",
                         id="max_depth",                                            
                         clearable=True,
@@ -55,18 +52,17 @@ class DecisionTree_VP:
                         value=None,
                         multi=False
                         ),
+                        
                         html.Br(),
                         html.Br(),
 
                         
-                    html.Div(className='rowhalf2',children=[
+                        html.Div(className='rowhalf2',children=[
                             
                             html.Div(className='colhalf2',children=[html.Br(),html.Br(),
                             dcc.RadioItems(id='setcreation',
                             options=[
-                            {'label': 'Cross-validation     _._._._._._._._._._._ \n _._._._._._._._._._._  ', 'value':'cross'},
-                            
-                            
+                            {'label': 'Cross-validation     _._._._._._._._._._._ \n _._._._._._._._._._._  ', 'value':'cross'},    
                             {'label': 'Percentage Split ', 'value': 'percentage'},
                             ],
                             value='cross'

@@ -1,30 +1,28 @@
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+
 import plotly.express as px
 import pandas as pd
 import numpy as np
+
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
+
 from algorithms import data
 
 
 class PcaAlgo:
     
-    def __init__(self,data1,features,reference,plotdimension):
+    def __init__(self,dataset,features,reference,plotdimension):
         self.reference=reference
-        self.df3=data1
+        self.df3=dataset
         self.df=pd.DataFrame()
         self.plotdimension=plotdimension
         self.features=features
 
-        # self.features=features
-        print(data.dataGuru.getDF())
-        #print(features)
-        #print(reference)
         if features!=None:
             for i in features:
                 self.df[i]=self.df3[i]
@@ -35,9 +33,6 @@ class PcaAlgo:
         
     def getPcaAnalysis(self):    
         
-        #check features are selected or not
-        if self.features==[]:
-            return [html.B('Please select features'),html.B(),html.B()]                
         #check reference is set or not
         df2 = pd.DataFrame()
         if self.reference!=None and self.reference in self.df.keys():
@@ -46,6 +41,43 @@ class PcaAlgo:
         else:
             df2['reference']=[] 
         
+        #check reference is selected or not
+        if self.reference==None:
+            return html.B('Please select reference')
+        
+        #check features are selected or not
+        if self.features==[] or self.features==None:
+            return html.B('Please select features')
+        
+        flag = 0
+        
+        #check reference is not selected in features 
+        for i in self.features:
+            if i==self.reference:
+                flag=1
+                break 
+        if flag==1:
+            return [html.B('please do not select reference in features')]
+
+        #check features contain string value or not            
+        for i in self.features:
+            print(i,self.reference)
+            for j in self.df[str(i)]:
+                if isinstance(j, str):
+                    stringcontaingfeature=i
+                    flag=1
+                    break 
+            if flag==1:
+                break
+
+        if flag==1:
+            return html.B('string value is not allowed in feature :'+str(stringcontaingfeature))
+
+        
+        #check plotdimesion is selected or not
+        if self.plotdimension==None:
+            self.plotdimension=2
+            
         #scalling the data
         scalar = StandardScaler()
         scalar.fit(self.df)
@@ -56,9 +88,9 @@ class PcaAlgo:
         n_component=min(n,m)
         possible_pc='Possible Number of PC is : '+str(n_component)                
         
-        
+        #if number of pca is less than 2 then 
         if n_component<2:
-            return [html.B(possible_pc),html.B(),html.B()]        
+            return html.B(possible_pc)        
         else:
             
             #fitting
@@ -72,14 +104,17 @@ class PcaAlgo:
             pca_df['reference']=df2['reference']
             pca_df['PC1']=x_pca[:,0]
             pca_df['PC2']=x_pca[:,1]
+            
             if n_component>2 and self.plotdimension==3 :
                 pca_df['PC3']=x_pca[:,2]
                 fig1 = px.scatter_3d(pca_df,x=pca_df['PC1'], y=pca_df['PC2'],z=pca_df['PC3'],color=pca_df['reference'], title="PCA Graph")    
                 plotdis="Here 3D scatter plot between pc1, pc2 and pc3 is"
+            
             else:
                 fig1 = px.scatter(pca_df,x=pca_df['PC1'], y=pca_df['PC2'],color=pca_df['reference'], title="PCA Graph")    
                 plotdis="Here 2D scatter plot between pc1 and pc2 is"
-            #For Percentage of Explained Variance Table 
+            
+            #for Percentage of Explained Variance Table 
             per_var = np.round(pca.explained_variance_ratio_* 100, decimals=1)
             labels = ['PC' + str(x) for x in range(1, len(per_var)+1)]
             s_df=pd.DataFrame()
@@ -95,31 +130,32 @@ class PcaAlgo:
                         'y':'Percentage of Explained Variance',
                     },title="PCA Scree Plot")
             ans=[possible_pc,fig1,columns,data,fig2]
-        
-            return [
-                #return possible number of pc
-                html.Div([ html.H1(ans[0]),html.Br(),html.Div(plotdis),
-                   
-                #return 2D scatterplot between pc1 and pc2          
-                dcc.Graph(
-                id='example-graph',
-                figure=ans[1],
-                )
-                ]),
-                
-                #return table Percentage of Explained Variance
-                html.Div([dash_table.DataTable(
-                id='table',
-                columns=ans[2],
-                data=ans[3],
 
-                )]),
-                
-                #return the scree plot
-                html.Div([
-                dcc.Graph(
-                id='example-graph_2',
-                figure=ans[4],
-                )
-                ]),
-                ]
+            #return possible number of pc
+            return   html.Div( children=[
+                                    html.Div([ html.H1(ans[0]),html.Br(),html.Div(plotdis),
+                                    
+                                    #return 2D scatterplot between pc1 and pc2          
+                                    dcc.Graph(
+                                    id='example-graph',
+                                    figure=ans[1],
+                                    )
+                                    ]),
+                                    
+                                    #return table Percentage of Explained Variance
+                                    html.Div([dash_table.DataTable(
+                                    id='table',
+                                    columns=ans[2],
+                                    data=ans[3],
+
+                                    )]),
+                                    
+                                    #return the scree plot
+                                    html.Div([
+                                    dcc.Graph(
+                                    id='example-graph_2',
+                                    figure=ans[4],
+                                    )
+                                    ]),
+                                    ]
+                                    )

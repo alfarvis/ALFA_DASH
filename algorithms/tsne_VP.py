@@ -1,19 +1,15 @@
-import os  
-import time
-import importlib
-import base64
-import argparse
-import io
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
-import numpy as np
-from dash.dependencies import Input, Output, State
-import pandas as pd
-import networkx as nx
 import dash_table
 from dash.exceptions import PreventUpdate
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output, State
+
+import numpy as np
+import pandas as pd
+import networkx as nx
 import utils.dash_reusable_components as drc
+
 from getAlgorithms import getAlgorithms
 from DataGuru import DataGuru
 from algorithms import data
@@ -21,16 +17,16 @@ from algorithms import data
 class tSNE_VP:
 
     @staticmethod
-    def getAlgoProps(options,colorscales):        
-        df=data.dataGuru.getDF()
+    def getAlgoProps(options,colorscales,globalData):        
+
+        df=globalData.dataGuru.getDF()
         x,y=df.shape
         PerplexityOptions=[{'label':str(i),'value':i} for i in range(1,x)]
-        PerplexityOptions.append({'label':'default','value':30})
         IterationOptions=[{'label':str(i),'value':i} for i in range(250 ,5001)]
-        IterationOptions.append({'label':'default','value':1000})
-        #print(type(IterationOptions))
+
         return html.Div([
 
+            #for th referecne
             drc.NamedDropdown(name="Reference",
                                         id='reference',                                            
                                         clearable=True,
@@ -39,6 +35,8 @@ class tSNE_VP:
                                         value=None,
                                         multi=False
                                     ),
+            
+            #for Perplexity
             drc.NamedDropdown(name="Perplexity",
                                         id='perplexityTsne',                                            
                                         clearable=True,
@@ -47,7 +45,7 @@ class tSNE_VP:
                                         value=30,
                                         multi=False
                                     ),
-            
+            #for Iteration
             drc.NamedDropdown(name="Iteration",
                                         id='iterationTsne',                                            
                                         clearable=True,
@@ -56,16 +54,20 @@ class tSNE_VP:
                                         value=1000,
                                         multi=False
                                     ),
-             html.Div(id='features'),
-             dcc.Checklist(
+             
+            #for features to give select all functionality
+            html.Div(id='features'),
+             
+            #check box for select all
+            dcc.Checklist(
                         id='selectall',
                         options=[{'label': 'All features', 'value':'ALL'}],
                         value=[],
                         ),
 
-
-
-            html.Button('tSNE Analysis', id='generate-tsne-analysis',n_clicks=0)
+            #button for output
+            html.Div(id='buttonbox'),
+            
             ]            
             )
         

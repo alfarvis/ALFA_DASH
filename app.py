@@ -1,3 +1,12 @@
+# from glob import glob
+# import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+# from keras import losses 
+# from keras import optimizers 
+# from keras import metrics 
+#added
+
 import os  
 import time
 import importlib
@@ -17,25 +26,55 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import utils.dash_reusable_components as drc
-from getAlgorithms import getAlgorithms
-from DataGuru import DataGuru
-from algorithms.DataPreprocessAlgo import DataPreprocessAlgo
+
+#Visulization Algorithms
 from algorithms.scatter2D_VP import Scatter2D_VP
 from algorithms.scatter3D_VP import Scatter3D_VP
 from algorithms.bar_VP import Bar_VP
 from algorithms.box_VP import Box_VP
 from algorithms.violin_VP import Violin_VP
+from algorithms.Histogram_VP import Histogram_VP
+from algorithms.Piechart_VP import Piechart_VP
+
+#plotting technique
+from algorithms.BlandAltman import BlandAltman
+from algorithms.BlandAltmanAlgo import BlandAltmanAlgo
+
+#Statistics Algorithms
 from algorithms.pr_curve_VP import PR_Curve_VP
 from algorithms.roc_curve_VP import ROC_Curve_VP
+from algorithms.Anova_VP import Anova_VP
+from algorithms.AnovaAlgo import AnovaAlgo
+from algorithms.Ttest_VP import Ttest_VP
+from algorithms.TtestAlgo import TtestAlgo
+from algorithms.Correlation_VP import Correlation_VP
+from algorithms.CorrelationAlgo import CorrelationAlgo
+from algorithms.MatthewsCorrelationCoefficient_VP import MatthewsCorrelationCoefficient_VP
+from algorithms.MatthewsCorrelationCoefficientAlgo import MatthewsCorrelationCoefficientAlgo
+from algorithms.Wilkoxon_VP import Wilkoxon_VP
+from algorithms.WilkoxonAlgo import WilkoxonAlgo
+
+#clustering 
+from algorithms.KmeansClustering_VP import KmeansClustering_VP
+from algorithms.KmeansClusteringAlgo import KmeansClusteringAlgo
+from algorithms.HierarchicalClustering_VP import HierarchicalClustering_VP
+from algorithms.HierarchicalClusteringAlgo import HierarchicalClusteringAlgo
+from algorithms.SpectralClustering_VP import SpectralClustering_VP
+from algorithms.SpectralClusteringAlgo import SpectralClusteringAlgo
+
+#Dimensionality reduction technique
 from algorithms.pca_VP import PCA_VP
 from algorithms.PcaAlgo import PcaAlgo
 from algorithms.tsne_VP import tSNE_VP
 from algorithms.tsneAlgo import TsneAlgo
-from algorithms.DataVis import DataVis
-from algorithms.BlandAltman import BlandAltman
-from algorithms.BlandAltmanAlgo import BlandAltmanAlgo
-from algorithms.isomap_VP import Isomap_VP
+from algorithms.DiffusionMap_VP import DiffusionMap_VP
+from algorithms.DiffusionMapAlgo import DiffusionMapAlgo
+from algorithms.LLE_VP import LLE_VP
+from algorithms.LLEAlgo import LLEAlgo
+from algorithms.Isomap_VP import Isomap_VP
 from algorithms.IsomapAlgo import IsomapAlgo
+
+#Classification Algorithms
 from algorithms.DecisionTree_VP import DecisionTree_VP
 from algorithms.DecisionTreeAlgo import DecisionTreeAlgo
 from algorithms.RandomForest_VP import RandomForest_VP
@@ -48,6 +87,8 @@ from algorithms.LogisticRegression_VP import LogisticRegression_VP
 from algorithms.LogisticRegressionAlgo import LogisticRegressionAlgo
 from algorithms.ArtificialNeuralNetworks_VP import ArtificialNeuralNetworks_VP
 from algorithms.ArtificialNeuralNetworksAlgo import ArtificialNeuralNetworksAlgo
+
+
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.metrics import precision_recall_curve, average_precision_score, roc_curve, roc_auc_score
@@ -55,7 +96,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
+
+from algorithms.DataVis import DataVis
+from getAlgorithms import getAlgorithms
+from DataGuru import DataGuru
+from algorithms.DataPreprocessAlgo import DataPreprocessAlgo
 from algorithms import data
+from algorithms.data import GlobalData
 
 # Basic dash auth
 # Keep this out of source code repository - save in a file or a database
@@ -84,32 +131,48 @@ auth = dash_auth.BasicAuth(
     app,
     VALID_USERNAME_PASSWORD_PAIRS
 )
-featureselection = html.Div(id='featureselection')
-featureselectionvis = html.Div(id='featureselectionvis')
-referencevis=html.Div(id='referencevis')
-reference=html.Div(id='reference')
+
 app.title = 'Alfarvis'
+
+dataVis=DataVis()
 algoClass = getAlgorithms()
 algo_list = algoClass.getAlgos()
+
 scatter2D_VP = Scatter2D_VP()
 scatter3D_VP = Scatter3D_VP()
 bar_VP = Bar_VP()
 box_VP = Box_VP()
+histogram_VP=Histogram_VP()
+piechart_VP=Piechart_VP()
 violin_VP = Violin_VP()
+
 pr_curve_VP = PR_Curve_VP()
 roc_curve_VP = ROC_Curve_VP()
-pca_VP = PCA_VP()
+ttest_VP=Ttest_VP()
+anova_VP=Anova_VP()
+matthewsCorrelationCoefficient_VP=MatthewsCorrelationCoefficient_VP()
+wilkoxon_VP=Wilkoxon_VP()
+correlation_VP=Correlation_VP()
+
 blandAltman=BlandAltman()
-dataVis=DataVis()
+
+pca_VP = PCA_VP()
+lle_VP=LLE_VP()
 tsne_VP=tSNE_VP()
 isomap_VP=Isomap_VP()
+diffusionMap_VP=DiffusionMap_VP()
+
 decisionTree_VP=DecisionTree_VP()
 randomForest_VP=RandomForest_VP()
 svm_VP=SVM_VP()
 autoML_VP=AutoML_VP()
 logisticRegression_VP=LogisticRegression_VP()
 artificialNeuralNetworks_VP=ArtificialNeuralNetworks_VP()
-data.init()
+
+kmeansClustering_VP=KmeansClustering_VP()
+
+globalData=GlobalData()
+
 app.layout = html.Div(
     children=[
         # .container class is fixed, .container.scalable is scalable
@@ -199,7 +262,7 @@ app.layout = html.Div(
                                     ),
                                     
                                     html.Hr(),
-                                    featureselection,reference,    
+                                    html.Div(id='featureselection'),    
                                     html.Div(id="functionProperties"),
                                     
                                     
@@ -222,18 +285,18 @@ app.layout = html.Div(
                                         dcc.Tab(label='Dashboard',value='tab-1',
                                         children=[ 
                                         drc.Card(  id='viscard',children=[
-                                        featureselectionvis,referencevis,
+                                    
                                         html.Div(id='get_vis'),
                                           
                                         html.Div(id="vis_table") ,
                                         html.Div(id="vis_splom") ,
-                                        html.B("Here we will put visulization")] 
+                                        ] 
                                         )]),
                                         
                                         dcc.Tab(label='Data',value='tab-2',
                                         children=[
                                             html.Div(id='filteration',children=[
-                                        data.getfilter()]),
+                                        data.getfilter(globalData)]),
                                         html.Div(id='loaded_data_table')
                                         ]
                                         ),
@@ -282,21 +345,23 @@ def upload_file(contents, filename, date,featureselection):
         myData  = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
         myData.dropna(subset=myData.keys(),inplace=True)#changed by me
         df=pd.DataFrame.from_records(myData)
-        data.dataGuru.setDF(df)
+        globalData.dataGuru.setDF(df)
         return [myData.to_dict('records'),html.A(str(filename).upper()+' UPLOADED',style={
                                         "text-decoration": "none",
                                         "color": "Green",
                                         "line-height": "64px",
-                                    },), dataVis.getFeatureVis()]
+                                    },), dataVis.getFeatureVis(globalData)]
     else:
         df=pd.DataFrame()
-        data.dataGuru.setDF(df)
+        globalData.dataGuru.setDF(df)
         return ['',html.A('DATA NOT UPLOADED',style={
                                         "text-decoration": "none",
                                         "color": "Red",
                                          "line-height": "64px",
-                                    },),html.A(id='generate-visulization',children=[html.A(id='visfeatures')])]
+                                    },),html.B('...')]
 
+
+   
 @app.callback(        
     [   Output('filteration', 'children'),
         Output('loaded_data_table', 'children'),],
@@ -315,7 +380,7 @@ def update_table(data1,n_clicks,filtfeatures,filtoperation,inputvalue):
     
     if n_clicks>0 and filtfeatures!=None and filtoperation!=None and inputvalue!=None:
         print('hello')
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         if filtoperation=='=':
             df=df[df[filtfeatures]==inputvalue]
         elif filtoperation=='>':
@@ -328,15 +393,15 @@ def update_table(data1,n_clicks,filtfeatures,filtoperation,inputvalue):
             df=df[df[filtfeatures]>=inputvalue]
         
         #print(df)
-        data.dataGuru.setDF(df)
-        return data.getfilter(),data.getTable()
+        globalData.dataGuru.setDF(df)
+        return data.getfilter(globalData),data.getTable(globalData)
     else:
         # print(data1[0].keys())
         #df = pd.DataFrame.from_records(data1)
         # print('here')
-        # data.dataGuru.setDF(df)
-        #print(data.dataGuru.getDF())
-        return data.getfilter(),data.getTable()
+        # globalData.dataGuru.setDF(df)
+        #print(globalData.dataGuru.getDF())
+        return data.getfilter(globalData),data.getTable(globalData)
 
 # Algorithm Selection
 @app.callback(    
@@ -351,7 +416,7 @@ def update_table(data1,n_clicks,filtfeatures,filtoperation,inputvalue):
     )
 def algorithmProps(content,algorithm):
     
-    df = data.dataGuru.getDF()
+    df = globalData.dataGuru.getDF()
     options = [{'label':i,'value':i} for i in df.columns]
     if algorithm==None:
         return ['','']
@@ -359,6 +424,10 @@ def algorithmProps(content,algorithm):
         return bar_VP.getAlgoProps(options,colorscales), html.Div(id='output_bar_graph')
     if algorithm == 'boxPlot':
         return box_VP.getAlgoProps(options,colorscales), html.Div(id='output_box_graph')
+    if algorithm == 'histogram':
+        return Histogram_VP.getAlgoProps(options,colorscales), html.Div(id='output_histogram_graph')
+    if algorithm == 'pieChart':
+        return piechart_VP.getAlgoProps(options,colorscales), html.Div(id='output_piechart_graph')
     if algorithm == 'violinPlot':
         return violin_VP.getAlgoProps(options,colorscales), html.Div(id='output_violin_graph')
     if algorithm == 'scatter2D':                
@@ -370,26 +439,31 @@ def algorithmProps(content,algorithm):
     if algorithm == 'roc_curve_VP':        
         return roc_curve_VP.getAlgoProps(options,colorscales), [html.Div(id='output_roc_curve'), html.Div(id="algoRes_Table_ROC")]
     if algorithm == 'pca_VP':        
-        return pca_VP.getAlgoProps(options,colorscales), [html.Div(id='output_pca_graph'),html.Div(id="algoRes_Table_PCA"),html.Div(id='output_pca_screePlot')]
+        return pca_VP.getAlgoProps(options,colorscales), [html.Div(id='output_pca_analysis')]
     if algorithm == 'blandAltman':        
         return blandAltman.getAlgoProps(options,colorscales), [html.Div(id='output_blandAltman_analysis')]
     if algorithm == 'tsne_VP':        
-        return tsne_VP.getAlgoProps(options,colorscales), [html.Div(id='output_tsne_analysis')]
+        return tsne_VP.getAlgoProps(options,colorscales,globalData), [html.Div(id='output_tsne_analysis')]
     if algorithm == 'isomap_VP':        
-        return isomap_VP.getAlgoProps(options,colorscales), [html.Div(id='output_isomap_analysis')]
+        return isomap_VP.getAlgoProps(options,colorscales,globalData), [html.Div(id='output_isomap_analysis')]
     if algorithm == 'dt_VP':
-        return decisionTree_VP.getAlgoProps(colorscales), html.Div(id='output_decisiontree_analysis')
+        return decisionTree_VP.getAlgoProps(colorscales,globalData), html.Div(id='output_decisiontree_analysis')
     if algorithm == 'rf_VP':
-        return randomForest_VP.getAlgoProps(colorscales), html.Div(id='output_randomforest_analysis')
+        return randomForest_VP.getAlgoProps(colorscales,globalData), html.Div(id='output_randomforest_analysis')
     if algorithm == 'svm_VP':
-        return svm_VP.getAlgoProps(colorscales), html.Div(id='output_svm_analysis')
+        return svm_VP.getAlgoProps(colorscales,globalData), html.Div(id='output_svm_analysis')
     if algorithm == 'automl_VP':
-        return autoML_VP.getAlgoProps(colorscales), html.Div(id='output_automl_analysis')
+        return autoML_VP.getAlgoProps(colorscales,globalData), html.Div(id='output_automl_analysis')
     if algorithm == 'logreg_VP':
-        return logisticRegression_VP.getAlgoProps(colorscales), html.Div(id='output_logisticregression_analysis')
+        return logisticRegression_VP.getAlgoProps(colorscales,globalData), html.Div(id='output_logisticregression_analysis')
     if algorithm == 'ann_VP':
-        return artificialNeuralNetworks_VP.getAlgoProps(colorscales), html.Div(id='output_artificialneuralnetworks_analysis')
-        
+        return artificialNeuralNetworks_VP.getAlgoProps(colorscales,globalData), html.Div(id='output_artificialneuralnetworks_analysis')
+    if algorithm == 'dfm_VP':
+        return diffusionMap_VP.getAlgoProps(options,colorscales,globalData), html.Div(id='output_dfm_analysis')
+    if algorithm == 'lle_VP':
+        return lle_VP.getAlgoProps(options,colorscales,globalData), html.Div(id='output_lle_analysis')
+    if algorithm == 'kMeans_VP':
+        return kmeansClustering_VP.getAlgoProps(options,colorscales,globalData), html.Div(id='output_kmeans_clustering_analysis')  
 
 # @app.callback(   
 #                   Output('aaaa', 'children'),
@@ -399,7 +473,7 @@ def algorithmProps(content,algorithm):
 #     ]
 #     )
 # def updatedataset(data):
-#     data.dataGuru.setDF(data)    
+#     globalData.dataGuru.setDF(data)    
     
 
 # @app.callback(Output(''))
@@ -415,7 +489,7 @@ def algorithmProps(content,algorithm):
     ]
     )
 def getSubClasses(featureColor):
-    df = data.dataGuru.getDF()    
+    df = globalData.dataGuru.getDF()    
     a=np.unique(df[featureColor])
     uniqVals = [{'label':i,'value':i} for i in a]
     #uniqVals = [str(i) for i in a]
@@ -437,7 +511,7 @@ def getSubClasses(featureColor):
 def BlandAltmanAnalysis(n_clicks,method1BlandAltman,method2BlandAltman):
     print(n_clicks)
     if n_clicks>0:
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         blandAltmanAlgo=BlandAltmanAlgo(df,method1BlandAltman,method2BlandAltman)
         return blandAltmanAlgo.getAnswer()
     else :
@@ -446,21 +520,21 @@ def BlandAltmanAnalysis(n_clicks,method1BlandAltman,method2BlandAltman):
 
 #PR CURVE
 @app.callback(
-    [Output('output_pr_curve','children'),
-    Output('algoRes_Table', 'children')],
-    [Input('generate-pr-curve','n_clicks'),
-    ],
-    [
-    State('featureX','value'),    
-    State('featureColor','value'),
-    State('subClass','value'),
-    State('colorscale','value'),
-    ]
-    )
+            [Output('output_pr_curve','children'),
+            Output('algoRes_Table', 'children')],
+            [Input('generate-pr-curve','n_clicks'),
+            ],
+            [
+            State('featureX','value'),    
+            State('featureColor','value'),
+            State('subClass','value'),
+            State('colorscale','value'),
+            ]
+            )
 def createPRPlot(n_clicks,featureX,featureColor,subClass,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         df2 = pd.DataFrame()
         df2['Feature'] = []
         f1 = [];
@@ -526,13 +600,13 @@ def createPRPlot(n_clicks,featureX,featureColor,subClass,colorscale):
         )])
 
 @app.callback(
-    Output('subClassROC','options'),    
-    [
-    Input('featureColorROC','value'),    
-    ]
-    )
+            Output('subClassROC','options'),    
+            [
+            Input('featureColorROC','value'),    
+            ]
+            )
 def getSubClasses(featureColor):
-    df = data.dataGuru.getDF()    
+    df = globalData.dataGuru.getDF()    
     a=np.unique(df[featureColor])
     uniqVals = [{'label':i,'value':i} for i in a]
     #uniqVals = [str(i) for i in a]
@@ -554,7 +628,7 @@ def getSubClasses(featureColor):
 def createROCPlot(n_clicks,featureX,featureColor,subClass,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         df2 = pd.DataFrame()
         df2['Feature'] = []
         f1 = [];
@@ -620,6 +694,51 @@ def createROCPlot(n_clicks,featureX,featureColor,subClass,colorscale):
         )])
 
 
+
+#Histogram implementation
+@app.callback(
+    Output('output_histogram_graph','children'),
+    [Input('generate-histogram-plot','n_clicks'),
+    ],
+    [
+    State('feature','value'),
+    ]
+    )
+def createHistogram(n_clicks,feature):
+    print(n_clicks)
+    if n_clicks>0:        
+        df = globalData.dataGuru.getDF()
+        fig = px.histogram(df, x=feature)                
+        return html.Div([
+            dcc.Graph(
+        id='example-graph1',
+        figure=fig,
+                )
+            ])
+
+#Pie chart implementation
+@app.callback(
+    Output('output_piechart_graph','children'),
+    [Input('generate-piechart-plot','n_clicks'),
+    ],
+    [
+    State('feature','value'),
+    State('reference','value'),
+    ]
+    )
+def createPiechart(n_clicks,feature,reference):
+    print(n_clicks)
+    if n_clicks>0:        
+        df = globalData.dataGuru.getDF()
+        fig = px.pie(df,values=feature, names=reference)                
+        return html.Div([
+            dcc.Graph(
+        id='example-graph1',
+        figure=fig,
+                )
+            ])
+
+#Bar Plot
 @app.callback(
     Output('output_bar_graph','children'),
     [Input('generate-bar-plot','n_clicks'),
@@ -634,7 +753,7 @@ def createROCPlot(n_clicks,featureX,featureColor,subClass,colorscale):
 def createBarPlot(n_clicks,featureX,featureY,featureColor,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         fig = px.bar(df, x=featureX, y=featureY, color=featureColor, color_continuous_scale=colorscale)                
         return html.Div([
             dcc.Graph(
@@ -643,6 +762,7 @@ def createBarPlot(n_clicks,featureX,featureY,featureColor,colorscale):
                 )
             ])
 
+#violin plot
 @app.callback(
     Output('output_violin_graph','children'),
     [Input('generate-violin-plot','n_clicks'),
@@ -656,7 +776,7 @@ def createBarPlot(n_clicks,featureX,featureY,featureColor,colorscale):
 def createViolinPlot(n_clicks,featureX,featureY,featureColor,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         fig = px.violin(df, x=featureX, y=featureY, color=featureColor)                
         return html.Div([
             dcc.Graph(
@@ -665,6 +785,7 @@ def createViolinPlot(n_clicks,featureX,featureY,featureColor,colorscale):
                 )
             ])
 
+#box-plot
 @app.callback(
     Output('output_box_graph','children'),
     [Input('generate-box-plot','n_clicks'),
@@ -679,7 +800,7 @@ def createViolinPlot(n_clicks,featureX,featureY,featureColor,colorscale):
 def createBoxPlot(n_clicks,featureX,featureY,featureColor,colorscale):
     print(n_clicks)
     if n_clicks>0:        
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         fig = px.box(df, x=featureX, y=featureY, color=featureColor)                
         return html.Div([
             dcc.Graph(
@@ -690,11 +811,12 @@ def createBoxPlot(n_clicks,featureX,featureY,featureColor,colorscale):
         
 
 
+
 #select all for algorithms
 @app.callback(Output('features','children'),Input(component_id='selectall',component_property='value'),[State('reference','value'),])
 def Selcectall(selectall,reference):
-    df = data.dataGuru.getDF()
-    options = [{'label':i,'value':i} for i in df.columns]
+    df = globalData.dataGuru.getDF()
+    options = [{'label':str(i),'value':str(i)} for i in df.columns]
     value=None
     line=''
     if selectall!=[]:
@@ -715,30 +837,31 @@ def Selcectall(selectall,reference):
 
 #select all for dashboard
 @app.callback(
-    Output('featuresvis','children'),
+    [Output('featuresvis','children'),Output('visbutton','children')],
     Input(component_id='selectallvis',component_property='value'),
     [State('referencevis','value'),]
             )
 def Selcectall(selectall,reference):
-    df = data.dataGuru.getDF()
+    df = globalData.dataGuru.getDF()
     options = [{'label':i,'value':i} for i in df.columns]
-    value=None
+    value1=None
     line=''
     if selectall!=[]:
-        value=list(df.columns)
-        if reference!=None and reference in value:
-            value.remove(reference)
-
+        value1=list(df.columns)
+        if reference!=None and reference in value1:
+            value1.remove(reference)
+        print(value1)
         line='You have selected All features'
         
     return html.Div([html.B(line),drc.NamedDropdown(name="Features", 
-                    id='featureselectionvis',                                        
+                    id='featuresviss',                                        
                     clearable=True,
                     searchable=True,
                     options=options,
-                    value=value,
+                    value=value1,
                     multi=True,
-                    )])                       
+                    )]), html.Button('visualize', id='generate-visulization',n_clicks=0)                 
+
 #TSNE ANALYSIS
 @app.callback(
     Output('output_tsne_analysis','children'),
@@ -751,20 +874,19 @@ def Selcectall(selectall,reference):
     ]
     )
 def TsneAnalysis(n_clicks,featureselection,reference,perplexityTsne,iterationTsne):
+    
     print(n_clicks)
     if n_clicks>0:
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         tsneAlgo=TsneAlgo(df,featureselection,reference,perplexityTsne,iterationTsne)
         return tsneAlgo.getAnswer()
     else :
-        return ''      
+        return html.B('...')      
 
 
 #PCA ANALYSIS        
 @app.callback(
-    [Output('output_pca_graph','children'),
-     Output('algoRes_Table_PCA', 'children'),
-     Output('output_pca_screePlot','children'),],
+    Output('output_pca_analysis','children'),
     [Input('generate-pca-analysis','n_clicks'),],
     [State('featureselection','value'),
      State('reference','value'),
@@ -773,12 +895,13 @@ def TsneAnalysis(n_clicks,featureselection,reference,perplexityTsne,iterationTsn
     )
 def PcaAnalysis(n_clicks,featureselection,reference,plotdimensionPca):
     print(n_clicks) 
+    
     if n_clicks>0 :
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         pca=PcaAlgo(df,featureselection,reference,plotdimensionPca)
         return pca.getPcaAnalysis()
     else :
-        return ['','','']
+        return html.B('....')
 
 
 #ISOMAP ANALYSIS        
@@ -799,10 +922,57 @@ def PcaAnalysis(n_clicks,featureselection,reference,plotdimensionPca):
 def IsomapAnalysis(n_clicks,featureselection,reference,n_neighbors,plotdimension):
     print(n_clicks)
     if n_clicks>0: 
-        isomap=IsomapAlgo(featureselection,reference,n_neighbors,plotdimension)
+        isomap=IsomapAlgo(featureselection,reference,n_neighbors,plotdimension,globalData)
         return isomap.getIsomapAnalysis()
     else :
-        return ['']
+        return [html.B('...')]
+        
+
+#get analysis buttton 
+@app.callback(
+        Output('buttonbox','children'),
+        Input(component_id='buttonbox',component_property='value'),
+        State(component_id='algorithm', component_property='value'),
+        )
+def GetButton(buttonbox,algorithm):
+    
+    
+		# {'label': 'Visualization ML: tSNE','value':'tsne_VP'},#done
+		# {'label': 'Visualization ML: PCA','value':'pca_VP'},#done
+		# {'label': 'Visualization ML: Isomap','value':'isomap_VP'},#done
+		# {'label': 'Visualization ML: Diffusion Map','value':'dfm_VP'},
+		# {'label': 'Visualization ML: LLE','value':'lle_VP'},
+		#html.Button('tSNE Analysis', id='generate-tsne-analysis',n_clicks=0)
+        #html.Button('PCA Analysis', id='generate-pca-analysis',n_clicks=0)
+        #html.Button('Isomap Analysis', id='generate-isomap-analysis',n_clicks=0)
+
+		
+    if algorithm == 'tsne_VP':
+        idvalue='generate-tsne-analysis'
+        buttonvalue='tSNE Analysis'
+    
+    if algorithm == 'pca_VP':
+        idvalue='generate-pca-analysis'
+        buttonvalue='PCA Analysis'
+        
+    if algorithm == 'isomap_VP':
+        idvalue='generate-isomap-analysis'
+        buttonvalue='Isomap Analysis'
+    
+    if algorithm == 'dfm_VP':
+        idvalue='generate-dfm-analysis'
+        buttonvalue='DFM Analysis'
+    
+    if algorithm == 'lle_VP':
+        idvalue='generate-lle-analysis'
+        buttonvalue='LLEAnalysis'
+    
+    if algorithm == 'kMeans_VP':
+        idvalue='generate-kmeans-clustering-analysis'
+        buttonvalue='K-Means Clustering Analysis'
+            
+    return html.Button(buttonvalue, id=idvalue,n_clicks=0)
+        
         
 
 #lock one field and unlock other one based on selected filed
@@ -812,7 +982,7 @@ def IsomapAnalysis(n_clicks,featureselection,reference,n_neighbors,plotdimension
         State(component_id='algorithm', component_property='value'),
         )
 def SelectOne(setcreation,algorithm):
-    df=data.dataGuru.getDF()
+    df=globalData.dataGuru.getDF()
     options=df.columns
     options=[{'label':i,'value':i} for i in options]
     
@@ -824,7 +994,7 @@ def SelectOne(setcreation,algorithm):
         svalue=False
     
     
-    folds=[{'label':i,'value':i} for i in range(1,x//2)]
+    folds=[{'label':i,'value':i} for i in range(2,x+1)]
     percentage=[{'label':i,'value':i} for i in range(1,99)]
         
         
@@ -911,7 +1081,7 @@ def DecisionTreeAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue
     
     print(n_clicks)
     if n_clicks>0:
-        decisiontree=DecisionTreeAlgo(featureselection,reference,numfolds,splitvalue,setcreation,max_depth)
+        decisiontree=DecisionTreeAlgo(featureselection,reference,numfolds,splitvalue,setcreation,max_depth,globalData)
         return decisiontree.getDecisionTreeAnalysis()
     else :
         return ['']
@@ -940,7 +1110,7 @@ def RandomForestAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue
     
     print(n_clicks)
     if n_clicks>0:
-        randomforest=RandomForestAlgo(featureselection,reference,numfolds,splitvalue,setcreation,n_estimators,max_depth)
+        randomforest=RandomForestAlgo(featureselection,reference,numfolds,splitvalue,setcreation,n_estimators,max_depth,globalData)
         return randomforest.getRandomForestAnalysis()
     else :
         return ['']
@@ -970,7 +1140,7 @@ def SVMAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreat
     
     print(n_clicks)
     if n_clicks>0:
-        svmAlgo=SVMAlgo(featureselection,reference,numfolds,splitvalue,setcreation,kernel,degree)
+        svmAlgo=SVMAlgo(featureselection,reference,numfolds,splitvalue,setcreation,kernel,degree,globalData)
         return svmAlgo.getSVMAnalysis()
     else :
         return ['']
@@ -993,43 +1163,128 @@ def SVMAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreat
     ]
 
     )
-def DecisionTreeAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreation):
+def AutoMLAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreation):
     
     
     print(n_clicks)
     if n_clicks>0:
-        automl=AutoMLAlgo(featureselection,reference,numfolds,splitvalue,setcreation)
+        automl=AutoMLAlgo(featureselection,reference,numfolds,splitvalue,setcreation,globalData)
         return automl.getAutoMLAnalysis()
     else :
         return ['']
 
-
-#Artificial Neural Networks ANALYSIS        
+#Artificial Neural Networks ANALYSIS 
 @app.callback(
     Output('output_artificialneuralnetworks_analysis','children'),
     [
     Input('generate-artificialneuralnetworks-analysis','n_clicks'),
     ],
-    
     [
     State('featureselection','value'),
     State('reference','value'),
     State('numfolds','value'),
     State('splitvalue','value'),
-    State('setcreation','value')
+    State('setcreation','value'),
     ]
 
     )
 def ArtificialNeuralNetworksAnalysis(n_clicks,featureselection,reference,numfolds,splitvalue,setcreation):
-    
-    print(n_clicks)
     if n_clicks>0:
-        artificialneuralnetworks=ArtificialNeuralNetworksAlgo(featureselection,reference,numfolds,splitvalue,setcreation)
-        return artificialneuralnetworks.getArtificialNeuralNetworksAnalysis()
-    else :
-        return ['']
+        artificialneuralnetworks=ArtificialNeuralNetworksAlgo(featureselection,reference,numfolds,splitvalue,setcreation,globalData) 
+        globalData.dataGuru.setALGO(artificialneuralnetworks)
+        globalData.dataGuru.setMODEL(None)
+        globalData.dataGuru.setLAYERCNT(-1)
+    
+        #check reference is selected or not
+        if reference==None:
+            return [html.B('Please select reference')]
+        #check features are selected or not
+        if featureselection==[] or featureselection==None:
+            return [html.B('Please select features')]
+        
+        #check fold value is selected or not
+        if setcreation=='cross' and numfolds==None:
+            return [html.B('Please select fold value')]    
+        
+        #check split value is selected or not
+        if setcreation=='percentage' and splitvalue==None:
+            return [html.B('Please select split percentage value')]    
+        
+        activationFun=[{'label':'Relu','value':'relu'},{'label':'Sigmoid','value':'sigmoid'}]
+        ans1=html.Div(className='rowhalf2',children=[       
+                                html.Div(className='colhalf2',children=[
+                                    drc.NamedDropdown(name="select nodes value",
+                                    id="nodesv",                                            
+                                    clearable=True,
+                                    searchable=True,
+                                    options=[{'label':str(i),'value':i} for i in range(1,10)],
+                                    value=5,
+                                    multi=False
+                                    ),html.Button('Add Layer', id='addlayer',n_clicks=0)]),
+                                html.Div(className='colhalf2',children=[
+                                    drc.NamedDropdown(name="Select activation function",
+                                    id="activationfunction",                                            
+                                    clearable=True,
+                                    searchable=True,
+                                    options=activationFun,
+                                    value='relu',
+                                    multi=False
+                                    ),html.Button('Delete last Layer', id='deletelayer',n_clicks=0)])]),html.Br(),html.Br()
+        ans2= html.Div(html.Button('Generate Model analysis', id='annclassification',n_clicks=0))
+        return     html.Div(dcc.Tabs(id="my-anntabs",value="tab-1", children = [dcc.Tab(label='Model Building',value="tab-1", children = [html.Div(ans1),html.Div(id='modelsummary')]),dcc.Tab(label='Model Analysis',value="tab-2", children=[html.Div(ans2),html.Div(id='modelanalysis')  ])]))
 
+@app.callback(
+    Output('modelsummary','children'),
+    [
+    Input('addlayer','n_clicks'),Input('deletelayer','n_clicks'),
+    ],
+    [
+    State('nodesv','value'),
+    State('activationfunction','value')
+    ]
 
+    )
+def UpdateModel(addb,deleteb,nodesv,activationfunction):
+    ctx = dash.callback_context
+    layercnt=globalData.dataGuru.getLAYERCNT()
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    artificialneuralnetworks= globalData.dataGuru.getALGO()   
+    if button_id=='addlayer' and addb>0:
+        print(addb,3)
+        globalData.dataGuru.setLAYERCNT(layercnt+1)
+        model=globalData.dataGuru.getMODEL()
+        features_dim=len(artificialneuralnetworks.features)
+        if layercnt==-1:
+            model = keras.Sequential()
+            model.add(layers.Dense(10, input_dim=features_dim, activation='relu',name='Input_Layer'))
+        summary=artificialneuralnetworks.addlayer(globalData,model,nodesv,activationfunction,layercnt+1)
+        return html.Div(summary)
+    elif button_id=='deletelayer' and deleteb>0:
+        print(deleteb,3)
+        df=globalData.dataGuru.getDF()
+        model=globalData.dataGuru.getMODEL()
+        if layercnt==-1:
+            return html.Div('Model Not have any layer')
+        else:
+            globalData.dataGuru.setLAYERCNT(layercnt-1)
+            summary=artificialneuralnetworks.deletelayer(globalData,model,layercnt)
+            return html.Div(summary)
+
+@app.callback(
+    Output('modelanalysis','children'),
+    [
+    Input('annclassification','n_clicks'),
+    ],
+    )
+def ModelAnalysis(n_clicks):    
+    if n_clicks>0:
+        artificialneuralnetworks=globalData.dataGuru.getALGO()    
+        model=globalData.dataGuru.getMODEL()
+        return artificialneuralnetworks.getArtificialNeuralNetworksAnalysis(globalData,model)
+    else:
+        return html.Div('...')
+    
+    
 #Logistic Regression ANALYSIS        
 @app.callback(
     Output('output_logisticregression_analysis','children'),
@@ -1051,7 +1306,7 @@ def LogisticRegressionAnalysis(n_clicks,featureselection,reference,numfolds,spli
     
     print(n_clicks)
     if n_clicks>0:
-        logisticregression=LogisticRegressionAlgo(featureselection,reference,numfolds,splitvalue,setcreation)
+        logisticregression=LogisticRegressionAlgo(featureselection,reference,numfolds,splitvalue,setcreation,globalData)
         return logisticregression.getLogisticRegressionAnalysis()
     else :
         return ['']
@@ -1075,7 +1330,7 @@ def createScatterPlot(n_clicks,featureX,featureY,featureColor,featureHover,featu
     print(n_clicks)
     if n_clicks>0: 
         #df = pd.DataFrame.from_records(data)                    
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         if featureHover is not None:
             if type(featureHover) != list:
                 featureHover = [featureHover]
@@ -1106,7 +1361,7 @@ def createScatterPlot3d(n_clicks,featureX,featureY,featureZ,featureColor,feature
     print(n_clicks)
     if n_clicks>0: 
         #df = pd.DataFrame.from_records(data)                    
-        df = data.dataGuru.getDF()
+        df = globalData.dataGuru.getDF()
         if featureHover is not None:
             if type(featureHover) != list:
                 featureHover = [featureHover]
@@ -1126,20 +1381,21 @@ def createScatterPlot3d(n_clicks,featureX,featureY,featureZ,featureColor,feature
    ], [ 
     Input('generate-visulization','n_clicks') ,
     ],
-    [State('featureselectionvis','value'),State('referencevis','value'),State('upload-data', 'filename'),],
+    [State('featuresviss','value'),State('referencevis','value'),State('upload-data', 'filename'),],
     )
+
 def getvisulization(n_clicks,featureselection,referencevis,filename):
     print(n_clicks)
     if n_clicks!= None and n_clicks>0 and featureselection!=None:
-        df = data.dataGuru.getDF()
-        DataPre=DataPreprocessAlgo()
-        vistable,fig=DataPre.getdescri(featureselection,referencevis,filename)
+        df = globalData.dataGuru.getDF()
+        DataPre=DataPreprocessAlgo(globalData)
+        vistable,fig=DataPre.getdescri(featureselection,referencevis,filename,globalData)
         #print(vistable)
         #fig = px.scatter_matrix(df)
         #fig.show()
         return [vistable ,fig]
     else :
-        return ['','']
+        return [html.Div(),html.Div()]
 
 
 #@app.callback(

@@ -4,20 +4,19 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-#from algorithms import data
-#from algorithms import data
+
 from algorithms import data
 import plotly.graph_objs as go
 import plotly.express as px
 from sklearn import utils
 
-
+globalData=None
 class DataPreprocessAlgo :
     
-    def __init__(self):
-        self.df =data.dataGuru.getDF()
+    def __init__(self,globalData):
+        self.df =globalData.dataGuru.getDF()
 
-    def getdescri(self,option,reference,datasetname):
+    def getdescri(self,option,reference,datasetname,globalData):
 
         if option==None or option==[]:
             return html.Div('please select features'),''

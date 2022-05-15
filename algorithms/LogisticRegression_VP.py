@@ -22,8 +22,8 @@ from algorithms import data
 class LogisticRegression_VP:
 
     @staticmethod
-    def getAlgoProps(colorscales):        
-        df=data.dataGuru.getDF()
+    def getAlgoProps(colorscales,globalData):        
+        df=globalData.dataGuru.getDF()
         options=df.columns
         options=[{'label':i,'value':i} for i in options]
             
