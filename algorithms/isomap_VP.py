@@ -1,32 +1,31 @@
-import os  
-import time
-import importlib
-import base64
-import argparse
-import io
 import dash
+import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
-import numpy as np
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
+
+import numpy as np
 import pandas as pd
 import networkx as nx
-import dash_table
-from dash.exceptions import PreventUpdate
 import utils.dash_reusable_components as drc
-from getAlgorithms import getAlgorithms
+
 from DataGuru import DataGuru
 from algorithms import data
+
 class Isomap_VP:
-
+    
     @staticmethod
-    def getAlgoProps(options,colorscales):   
-        df=data.dataGuru.getDF()
+    def getAlgoProps(options,colorscales,globalData):   
+        
+        #load the data
+        df=globalData.dataGuru.getDF()
         x,y=df.shape
-        print(df.shape)     
+        
         return html.Div([
-
-            drc.NamedDropdown(name="Reference",
+                
+                #for reference
+                drc.NamedDropdown(name="Reference",
                                         id="reference",                                            
                                         clearable=True,
                                         searchable=True,
@@ -34,7 +33,9 @@ class Isomap_VP:
                                         value=None,
                                         multi=False
                                     ),
-            drc.NamedDropdown(name="Plot dimension",
+                
+                #for plot dimension
+                drc.NamedDropdown(name="Plot dimension",
                         id="plotdimensionisomap",                                            
                         clearable=True,
                         searchable=True,
@@ -43,7 +44,8 @@ class Isomap_VP:
                         value=None,
                         ),
             
-               drc.NamedDropdown(name="Number of neighbors",
+                #for n_neighbors
+                drc.NamedDropdown(name="Number of neighbors",
                         id="n_neighbors",                                            
                         clearable=True,
                         searchable=True,
@@ -51,16 +53,20 @@ class Isomap_VP:
                         options=[{'label': str(i), 'value':i} for i in range(1,x)],
                         value=5,
                         ),
-                     
-            html.Div(id='features'),
-             dcc.Checklist(
-                        id='selectall',
-                        options=[{'label': 'All features', 'value':'ALL'}],
-                        value=[],
-                        ),
+                
+                #for featurs to give select all functionality     
+                html.Div(id='features'),
+                
+                #select all check box
+                dcc.Checklist(
+                            id='selectall',
+                            options=[{'label': 'All features', 'value':'ALL'}],
+                            value=[],
+                            ),
 
+                #for output button
+                html.Div(id='buttonbox'),
 
-            html.Button('Isomap Analysis', id='generate-isomap-analysis',n_clicks=0)
             ]            
             )
         

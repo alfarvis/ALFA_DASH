@@ -19,18 +19,19 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from DataGuru import DataGuru
 
-def init():
-    global df
+class GlobalData:
+    #global df
     df=pd.DataFrame()
-    global datalst
+    #global datalst
     datalst=dict()
-    global dataGuru 
+    #global dataGuru 
     dataGuru= DataGuru()
+    #global model
+    model=None
 
-
-def getfilter():
+def getfilter(globalData):
         
-    df=dataGuru.getDF()
+    df=globalData.dataGuru.getDF()
     features=list(df.columns)
     features=[{'label':i,'value':i} for i in features]
     operations=['>','<','=','<=','>=']
@@ -71,9 +72,9 @@ def getfilter():
             ]            
             )
 
-def getTable():
+def getTable(globalData):
     
-    df=dataGuru.getDF()
+    df=globalData.dataGuru.getDF()
     return dash_table.DataTable(
         id='table',
         columns=[{"name": i, "id": i,"deletable": True} for i in df.columns],
@@ -83,7 +84,7 @@ def getTable():
         
         #styling the table
         page_size=15,
-        style_table={'overflowX': 'auto'},
+        style_table={'overflowX': 'a uto'},
         style_data={
         'color': 'black',
         'whiteSpace': 'normal',

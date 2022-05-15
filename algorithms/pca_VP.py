@@ -1,23 +1,14 @@
-import os  
-import time
-import importlib
-import base64
-import argparse
-import io
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
-import numpy as np
-from dash.dependencies import Input, Output, State
-import pandas as pd
-import networkx as nx
 import dash_table
 from dash.exceptions import PreventUpdate
-import utils.dash_reusable_components as drc
-from getAlgorithms import getAlgorithms
-from DataGuru import DataGuru
-from algorithms.DataPreprocessAlgo import DataPreprocessAlgo
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output, State
 
+import numpy as np
+import pandas as pd
+import networkx as nx
+import utils.dash_reusable_components as drc
 
 class PCA_VP:
 
@@ -26,8 +17,7 @@ class PCA_VP:
 
         return html.Div([
                        
-                    
-
+                        #for reference
                         drc.NamedDropdown(name="Reference",
                         id="reference",                                            
                         clearable=True,
@@ -37,6 +27,7 @@ class PCA_VP:
                         multi=False
                         ),
                         
+                        #for Plot dimension
                         drc.NamedDropdown(name="Plot dimension",
                         id="plotdimensionPca",                                            
                         clearable=True,
@@ -45,18 +36,21 @@ class PCA_VP:
                         options=[{'label': '2D', 'value':2},{'label': '3D', 'value':3}],
                         value=None,
                         ),
+                        
+                        #for featurs to give select all functionality     
                         html.Div(id='features'),
                         
-                         dcc.Checklist(
+                        #select all checklist
+                        dcc.Checklist(
                         id='selectall',
                         options=[{'label': 'All features', 'value':'ALL'}],
                         value=[],
                         ),
                         
                         
+                        #for output button
+                        html.Div(id='buttonbox'),
 
-
-            html.Button('PCA Analysis', id='generate-pca-analysis',n_clicks=0)
             ]            
             )
         
