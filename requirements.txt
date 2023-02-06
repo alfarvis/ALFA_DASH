@@ -48,7 +48,7 @@ matplotlib==3.2.1
 mccabe==0.6.1
 networkx==2.4
 numpy==1.18.5
-oauthlib==3.2.0
+oauthlib==3.2.2
 opt-einsum==3.3.0
 pandas==1.0.4
 plotly==4.7.1
